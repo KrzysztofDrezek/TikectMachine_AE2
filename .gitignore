@@ -1,17 +1,4 @@
-# IntelliJ / IDE
-.idea/
-*.iml
-
-# Gradle
-.gradle/
-
-# Build outputs
-build/
-out/
-
-# Local runtime data (db, etc.)
-data/
-.gradle/
+﻿.gradle/
 .idea/
 *.iml
 build/
