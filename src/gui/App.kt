@@ -1,14 +1,11 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.group.ticketmachine.gui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.group.ticketmachine.model.Destination
@@ -29,13 +26,14 @@ fun App(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                OutlinedButton(onClick = onBack) {
+                    Text("Back")
                 }
-
                 Text("Admin: Destinations", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.width(1.dp))
             }
 
             Spacer(Modifier.height(12.dp))
@@ -98,7 +96,8 @@ private fun DestinationRow(
     Card {
         Row(
             Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = editName,
