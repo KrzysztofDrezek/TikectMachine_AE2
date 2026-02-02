@@ -1,6 +1,24 @@
-﻿.gradle/
+﻿# IntelliJ / IDE
 .idea/
 *.iml
+*.ipr
+*.iws
+
+# Gradle
+.gradle/
+**/.gradle/
+
+# Build outputs
 build/
+**/build/
 out/
+**/out/
+
+# App runtime data
 data/
+**/data/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini

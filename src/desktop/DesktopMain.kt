@@ -27,8 +27,8 @@ fun main() = application {
 
     val repo = DestinationRepo(db.connection)
 
-    var screen by remember { mutableStateOf(Screen.HOME) }
     var destinations by remember { mutableStateOf<List<Destination>>(emptyList()) }
+    var screen by remember { mutableStateOf(Screen.HOME) }
 
     fun refresh() {
         destinations = repo.listAll()
@@ -37,40 +37,39 @@ fun main() = application {
     LaunchedEffect(Unit) { refresh() }
 
     Window(onCloseRequest = ::exitApplication, title = "TicketMachine") {
-
         when (screen) {
-            Screen.HOME -> HomeScreen(
-                onBuy = {
-                    refresh()
-                    screen = Screen.BUY
-                },
-                onAdmin = {
-                    refresh()
-                    screen = Screen.ADMIN
-                }
-            )
+            Screen.HOME -> {
+                HomeScreen(
+                    onBuy = { screen = Screen.BUY },
+                    onAdmin = { screen = Screen.ADMIN }
+                )
+            }
 
-            Screen.BUY -> BuyScreen(
-                destinations = destinations,
-                onBack = { screen = Screen.HOME }
-            )
+            Screen.BUY -> {
+                BuyScreen(
+                    destinations = destinations,
+                    onBack = { screen = Screen.HOME }
+                )
+            }
 
-            Screen.ADMIN -> App(
-                destinations = destinations,
-                onAdd = { name, price ->
-                    repo.add(name, price)
-                    refresh()
-                },
-                onUpdate = { id, name, price ->
-                    repo.update(id, name, price)
-                    refresh()
-                },
-                onDelete = { id ->
-                    repo.delete(id)
-                    refresh()
-                }
-            )
+            Screen.ADMIN -> {
+                App(
+                    destinations = destinations,
+                    onBack = { screen = Screen.HOME },
+                    onAdd = { name, price ->
+                        repo.add(name, price)
+                        refresh()
+                    },
+                    onUpdate = { id, name, price ->
+                        repo.update(id, name, price)
+                        refresh()
+                    },
+                    onDelete = { id ->
+                        repo.delete(id)
+                        refresh()
+                    }
+                )
+            }
         }
     }
 }
-

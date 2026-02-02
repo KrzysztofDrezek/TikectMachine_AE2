@@ -1,8 +1,12 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.group.ticketmachine.gui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -12,6 +16,7 @@ import com.group.ticketmachine.model.Destination
 @Composable
 fun App(
     destinations: List<Destination>,
+    onBack: () -> Unit,
     onAdd: (String, Double) -> Unit,
     onUpdate: (Int, String, Double) -> Unit,
     onDelete: (Int) -> Unit
@@ -21,7 +26,17 @@ fun App(
 
     MaterialTheme {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Text("Destinations", style = MaterialTheme.typography.headlineSmall)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                }
+
+                Text("Admin: Destinations", style = MaterialTheme.typography.headlineSmall)
+            }
 
             Spacer(Modifier.height(12.dp))
 
