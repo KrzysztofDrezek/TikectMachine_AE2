@@ -3,48 +3,25 @@ package com.group.ticketmachine.gui
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun HomeScreen(
     onBuy: () -> Unit,
-    onAdmin: () -> Unit
+    onAdmin: () -> Unit,
+    onHistory: () -> Unit
 ) {
-    MaterialTheme {
-        Box(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                modifier = Modifier.widthIn(max = 520.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("TicketMachine", style = MaterialTheme.typography.headlineMedium)
+    Column(Modifier.fillMaxSize().padding(16.dp)) {
+        Text("TicketMachine", style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
 
-                Text(
-                    "Choose a mode",
-                    style = MaterialTheme.typography.bodyLarge
-                )
+        Button(onClick = onBuy, modifier = Modifier.fillMaxWidth()) { Text("Buy") }
+        Spacer(Modifier.height(12.dp))
 
-                Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onHistory, modifier = Modifier.fillMaxWidth()) { Text("History") }
+        Spacer(Modifier.height(12.dp))
 
-                Button(
-                    onClick = onBuy,
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
-                ) {
-                    Text("BUY")
-                }
-
-                OutlinedButton(
-                    onClick = onAdmin,
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
-                ) {
-                    Text("ADMIN")
-                }
-            }
-        }
+        OutlinedButton(onClick = onAdmin, modifier = Modifier.fillMaxWidth()) { Text("Admin") }
     }
 }
