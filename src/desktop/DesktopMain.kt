@@ -36,13 +36,13 @@ fun main() = application {
 
     LaunchedEffect(Unit) { refresh() }
 
-    DisposableEffect(Unit) {
-        onDispose {
+    Window(
+        onCloseRequest = {
             db.close()
-        }
-    }
-
-    Window(onCloseRequest = ::exitApplication, title = "TicketMachine") {
+            exitApplication()
+        },
+        title = "TicketMachine"
+    ) {
         when (screen) {
             Screen.HOME -> {
                 HomeScreen(

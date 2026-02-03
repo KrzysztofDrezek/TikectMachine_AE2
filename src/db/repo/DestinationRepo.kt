@@ -49,4 +49,3 @@ class DestinationRepo(private val connection: Connection) {
         }
     }
 }
-
