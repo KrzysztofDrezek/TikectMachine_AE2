@@ -12,11 +12,9 @@ import com.group.ticketmachine.gui.BuyScreen
 import com.group.ticketmachine.gui.HistoryScreen
 import com.group.ticketmachine.gui.HomeScreen
 import com.group.ticketmachine.model.Destination
-import com.group.ticketmachine.model.TicketPurchase
+import com.group.ticketmachine.db.repo.TicketRepo.TicketRecord
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 private enum class Screen {
     HOME, BUY, ADMIN, HISTORY
@@ -34,68 +32,81 @@ fun main() = application {
     val ticketRepo = TicketRepo(db.connection)
 
     var destinations by remember { mutableStateOf<List<Destination>>(emptyList()) }
-    var purchases by remember { mutableStateOf<List<TicketPurchase>>(emptyList()) }
+    var purchases by remember { mutableStateOf<List<TicketRecord>>(emptyList()) }
     var screen by remember { mutableStateOf(Screen.HOME) }
 
     fun refreshDestinations() {
         destinations = destinationRepo.listAll()
     }
 
-    fun refreshHistory() {
-        purchases = ticketRepo.listAll()
+    fun refreshPurchases() {
+        purchases = ticketRepo.listRecent(limit = 20)
     }
 
-    LaunchedEffect(Unit) {
+    fun refreshAll() {
         refreshDestinations()
-        refreshHistory()
+        refreshPurchases()
     }
 
-    DisposableEffect(Unit) {
-        onDispose { db.close() }
-    }
+    LaunchedEffect(Unit) { refreshAll() }
 
     Window(onCloseRequest = ::exitApplication, title = "TicketMachine") {
         when (screen) {
-            Screen.HOME -> HomeScreen(
-                onBuy = { screen = Screen.BUY },
-                onAdmin = { screen = Screen.ADMIN },
-                onHistory = {
-                    refreshHistory()
-                    screen = Screen.HISTORY
-                }
-            )
+            Screen.HOME -> {
+                HomeScreen(
+                    onBuy = { screen = Screen.BUY },
+                    onAdmin = { screen = Screen.ADMIN },
+                    onHistory = {
+                        refreshPurchases()
+                        screen = Screen.HISTORY
+                    }
+                )
+            }
 
-            Screen.BUY -> BuyScreen(
-                destinations = destinations,
-                onBack = { screen = Screen.HOME },
-                onConfirmPurchase = { d ->
-                    val ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                    ticketRepo.add(destinationId = d.id, amount = d.price, purchasedAt = ts)
-                    refreshHistory()
-                }
-            )
+            Screen.BUY -> {
+                BuyScreen(
+                    destinations = destinations,
+                    onBack = { screen = Screen.HOME },
+                    onConfirmPurchase = { destination, type, amountDue ->
+                        ticketRepo.recordPurchase(
+                            destinationId = destination.id,
+                            ticketType = type,
+                            amountDue = amountDue
+                        )
+                        refreshPurchases()
+                    }
+                )
+            }
 
-            Screen.ADMIN -> App(
-                destinations = destinations,
-                onBack = { screen = Screen.HOME },
-                onAdd = { name, price ->
-                    destinationRepo.add(name, price)
-                    refreshDestinations()
-                },
-                onUpdate = { id, name, price ->
-                    destinationRepo.update(id, name, price)
-                    refreshDestinations()
-                },
-                onDelete = { id ->
-                    destinationRepo.delete(id)
-                    refreshDestinations()
-                }
-            )
+            Screen.ADMIN -> {
+                App(
+                    destinations = destinations,
+                    onBack = { screen = Screen.HOME },
+                    onAdd = { name, singlePrice, returnPrice ->
+                        destinationRepo.add(name, singlePrice, returnPrice)
+                        refreshDestinations()
+                    },
+                    onUpdate = { id, name, singlePrice, returnPrice ->
+                        destinationRepo.update(id, name, singlePrice, returnPrice)
+                        refreshDestinations()
+                    },
+                    onDelete = { id ->
+                        destinationRepo.delete(id)
+                        refreshDestinations()
+                    },
+                    onApplyFactor = { factor ->
+                        destinationRepo.applyFactor(factor)
+                        refreshDestinations()
+                    }
+                )
+            }
 
-            Screen.HISTORY -> HistoryScreen(
-                purchases = purchases,
-                onBack = { screen = Screen.HOME }
-            )
+            Screen.HISTORY -> {
+                HistoryScreen(
+                    purchases = purchases,
+                    onBack = { screen = Screen.HOME }
+                )
+            }
         }
     }
 }

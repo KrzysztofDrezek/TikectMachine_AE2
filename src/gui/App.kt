@@ -5,7 +5,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.group.ticketmachine.model.Destination
@@ -14,26 +13,21 @@ import com.group.ticketmachine.model.Destination
 fun App(
     destinations: List<Destination>,
     onBack: () -> Unit,
-    onAdd: (String, Double) -> Unit,
-    onUpdate: (Int, String, Double) -> Unit,
-    onDelete: (Int) -> Unit
+    onAdd: (String, Double, Double) -> Unit,
+    onUpdate: (Int, String, Double, Double) -> Unit,
+    onDelete: (Int) -> Unit,
+    onApplyFactor: (Double) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("") }
+    var singlePrice by remember { mutableStateOf("") }
+    var returnPrice by remember { mutableStateOf("") }
+    var factor by remember { mutableStateOf("") }
 
     MaterialTheme {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                OutlinedButton(onClick = onBack) {
-                    Text("Back")
-                }
-                Text("Admin: Destinations", style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.width(1.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Admin - Destinations", style = MaterialTheme.typography.headlineSmall)
+                OutlinedButton(onClick = onBack) { Text("Back") }
             }
 
             Spacer(Modifier.height(12.dp))
@@ -48,24 +42,49 @@ fun App(
                     label = { Text("Name") },
                     modifier = Modifier.weight(1f)
                 )
-
                 OutlinedTextField(
-                    value = price,
-                    onValueChange = { price = it },
-                    label = { Text("Price") },
+                    value = singlePrice,
+                    onValueChange = { singlePrice = it },
+                    label = { Text("Single") },
                     modifier = Modifier.width(140.dp)
                 )
-
-                Button(
-                    onClick = {
-                        val p = price.replace(",", ".").toDoubleOrNull()
-                        if (name.isNotBlank() && p != null) {
-                            onAdd(name, p)
-                            name = ""
-                            price = ""
-                        }
+                OutlinedTextField(
+                    value = returnPrice,
+                    onValueChange = { returnPrice = it },
+                    label = { Text("Return") },
+                    modifier = Modifier.width(140.dp)
+                )
+                Button(onClick = {
+                    val sp = singlePrice.replace(",", ".").toDoubleOrNull()
+                    val rp = returnPrice.replace(",", ".").toDoubleOrNull()
+                    if (name.isNotBlank() && sp != null && rp != null) {
+                        onAdd(name, sp, rp)
+                        name = ""
+                        singlePrice = ""
+                        returnPrice = ""
                     }
-                ) { Text("Add") }
+                }) { Text("Add") }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = factor,
+                    onValueChange = { factor = it },
+                    label = { Text("Price factor (e.g. 1.10)") },
+                    modifier = Modifier.weight(1f)
+                )
+                Button(onClick = {
+                    val f = factor.replace(",", ".").toDoubleOrNull()
+                    if (f != null) {
+                        onApplyFactor(f)
+                        factor = ""
+                    }
+                }) { Text("Apply") }
             }
 
             Spacer(Modifier.height(12.dp))
@@ -87,43 +106,54 @@ fun App(
 @Composable
 private fun DestinationRow(
     destination: Destination,
-    onUpdate: (Int, String, Double) -> Unit,
+    onUpdate: (Int, String, Double, Double) -> Unit,
     onDelete: (Int) -> Unit
 ) {
     var editName by remember(destination.id) { mutableStateOf(destination.name) }
-    var editPrice by remember(destination.id) { mutableStateOf(destination.price.toString()) }
+    var editSingle by remember(destination.id) { mutableStateOf("%.2f".format(destination.singlePrice)) }
+    var editReturn by remember(destination.id) { mutableStateOf("%.2f".format(destination.returnPrice)) }
 
     Card {
-        Row(
-            Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = editName,
-                onValueChange = { editName = it },
-                label = { Text("Name") },
-                modifier = Modifier.weight(1f)
-            )
+        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+            Text("Sales: ${destination.salesCount}")
 
-            OutlinedTextField(
-                value = editPrice,
-                onValueChange = { editPrice = it },
-                label = { Text("Price") },
-                modifier = Modifier.width(140.dp)
-            )
+            Spacer(Modifier.height(8.dp))
 
-            Button(
-                onClick = {
-                    val p = editPrice.replace(",", ".").toDoubleOrNull()
-                    if (editName.isNotBlank() && p != null) {
-                        onUpdate(destination.id, editName, p)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = editName,
+                    onValueChange = { editName = it },
+                    label = { Text("Name") },
+                    modifier = Modifier.weight(1f)
+                )
+
+                OutlinedTextField(
+                    value = editSingle,
+                    onValueChange = { editSingle = it },
+                    label = { Text("Single") },
+                    modifier = Modifier.width(140.dp)
+                )
+
+                OutlinedTextField(
+                    value = editReturn,
+                    onValueChange = { editReturn = it },
+                    label = { Text("Return") },
+                    modifier = Modifier.width(140.dp)
+                )
+
+                Button(onClick = {
+                    val sp = editSingle.replace(",", ".").toDoubleOrNull()
+                    val rp = editReturn.replace(",", ".").toDoubleOrNull()
+                    if (editName.isNotBlank() && sp != null && rp != null) {
+                        onUpdate(destination.id, editName, sp, rp)
                     }
-                }
-            ) { Text("Save") }
+                }) { Text("Save") }
 
-            OutlinedButton(onClick = { onDelete(destination.id) }) { Text("Delete") }
+                OutlinedButton(onClick = { onDelete(destination.id) }) { Text("Delete") }
+            }
         }
     }
 }
-

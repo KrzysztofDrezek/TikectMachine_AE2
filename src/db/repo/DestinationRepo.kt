@@ -6,37 +6,52 @@ import java.sql.Connection
 class DestinationRepo(private val connection: Connection) {
 
     fun listAll(): List<Destination> {
-        val sql = "SELECT id, name, price FROM destinations ORDER BY name"
-        return connection.prepareStatement(sql).use { ps ->
+        val sql = """
+            SELECT id, name, single_price, return_price
+            FROM destinations
+            ORDER BY name COLLATE NOCASE
+        """.trimIndent()
+
+        connection.prepareStatement(sql).use { ps ->
             ps.executeQuery().use { rs ->
                 val out = mutableListOf<Destination>()
                 while (rs.next()) {
-                    out += Destination(
-                        id = rs.getInt("id"),
-                        name = rs.getString("name"),
-                        price = rs.getDouble("price")
+                    out.add(
+                        Destination(
+                            id = rs.getInt("id"),
+                            name = rs.getString("name"),
+                            singlePrice = rs.getDouble("single_price"),
+                            returnPrice = rs.getDouble("return_price")
+                        )
                     )
                 }
-                out
+                return out
             }
         }
     }
 
-    fun add(name: String, price: Double) {
-        val sql = "INSERT INTO destinations(name, price) VALUES (?, ?)"
+    fun add(name: String, singlePrice: Double, returnPrice: Double) {
+        val sql = "INSERT INTO destinations(name, single_price, return_price) VALUES (?, ?, ?)"
         connection.prepareStatement(sql).use { ps ->
             ps.setString(1, name.trim())
-            ps.setDouble(2, price)
+            ps.setDouble(2, singlePrice)
+            ps.setDouble(3, returnPrice)
             ps.executeUpdate()
         }
     }
 
-    fun update(id: Int, name: String, price: Double) {
-        val sql = "UPDATE destinations SET name = ?, price = ? WHERE id = ?"
+    fun update(id: Int, name: String, singlePrice: Double, returnPrice: Double) {
+        val sql = """
+            UPDATE destinations
+            SET name = ?, single_price = ?, return_price = ?
+            WHERE id = ?
+        """.trimIndent()
+
         connection.prepareStatement(sql).use { ps ->
             ps.setString(1, name.trim())
-            ps.setDouble(2, price)
-            ps.setInt(3, id)
+            ps.setDouble(2, singlePrice)
+            ps.setDouble(3, returnPrice)
+            ps.setInt(4, id)
             ps.executeUpdate()
         }
     }
@@ -45,6 +60,15 @@ class DestinationRepo(private val connection: Connection) {
         val sql = "DELETE FROM destinations WHERE id = ?"
         connection.prepareStatement(sql).use { ps ->
             ps.setInt(1, id)
+            ps.executeUpdate()
+        }
+    }
+
+    fun applyFactor(factor: Double) {
+        val safeFactor = factor
+        val sql = "UPDATE destinations SET return_price = single_price * ?"
+        connection.prepareStatement(sql).use { ps ->
+            ps.setDouble(1, safeFactor)
             ps.executeUpdate()
         }
     }
