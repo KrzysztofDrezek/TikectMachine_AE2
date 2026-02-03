@@ -6,6 +6,7 @@ import androidx.compose.ui.window.application
 import com.group.ticketmachine.db.Db
 import com.group.ticketmachine.db.Schema
 import com.group.ticketmachine.db.repo.DestinationRepo
+import com.group.ticketmachine.db.repo.TicketRepo
 import com.group.ticketmachine.gui.App
 import com.group.ticketmachine.gui.BuyScreen
 import com.group.ticketmachine.gui.HomeScreen
@@ -25,24 +26,19 @@ fun main() = application {
     Schema.create(db.connection)
     Schema.seed(db.connection)
 
-    val repo = DestinationRepo(db.connection)
+    val destinationRepo = DestinationRepo(db.connection)
+    val ticketRepo = TicketRepo(db.connection)
 
     var destinations by remember { mutableStateOf<List<Destination>>(emptyList()) }
     var screen by remember { mutableStateOf(Screen.HOME) }
 
-    fun refresh() {
-        destinations = repo.listAll()
+    fun refreshDestinations() {
+        destinations = destinationRepo.listAll()
     }
 
-    LaunchedEffect(Unit) { refresh() }
+    LaunchedEffect(Unit) { refreshDestinations() }
 
-    Window(
-        onCloseRequest = {
-            db.close()
-            exitApplication()
-        },
-        title = "TicketMachine"
-    ) {
+    Window(onCloseRequest = ::exitApplication, title = "TicketMachine") {
         when (screen) {
             Screen.HOME -> {
                 HomeScreen(
@@ -54,6 +50,13 @@ fun main() = application {
             Screen.BUY -> {
                 BuyScreen(
                     destinations = destinations,
+                    onConfirmPurchase = { d ->
+                        ticketRepo.addPurchase(
+                            destinationId = d.id,
+                            destinationName = d.name,
+                            price = d.price
+                        )
+                    },
                     onBack = { screen = Screen.HOME }
                 )
             }
@@ -63,16 +66,16 @@ fun main() = application {
                     destinations = destinations,
                     onBack = { screen = Screen.HOME },
                     onAdd = { name, price ->
-                        repo.add(name, price)
-                        refresh()
+                        destinationRepo.add(name, price)
+                        refreshDestinations()
                     },
                     onUpdate = { id, name, price ->
-                        repo.update(id, name, price)
-                        refresh()
+                        destinationRepo.update(id, name, price)
+                        refreshDestinations()
                     },
                     onDelete = { id ->
-                        repo.delete(id)
-                        refresh()
+                        destinationRepo.delete(id)
+                        refreshDestinations()
                     }
                 )
             }
