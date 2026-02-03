@@ -1,5 +1,6 @@
 package com.group.ticketmachine.gui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,74 +10,110 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.group.ticketmachine.model.Destination
+import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BuyScreen(
     destinations: List<Destination>,
-    onConfirmPurchase: (Destination) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onConfirmPurchase: (Destination) -> Unit
 ) {
     var selected by remember { mutableStateOf<Destination?>(null) }
-    val amountDue = selected?.price ?: 0.0
+    var showConfirm by remember { mutableStateOf(false) }
+    var showSuccess by remember { mutableStateOf(false) }
 
-    MaterialTheme {
-        Box(Modifier.fillMaxSize().padding(20.dp)) {
-            Column(Modifier.fillMaxSize()) {
-                Text("Buy Ticket", style = MaterialTheme.typography.headlineMedium)
+    val amountDue = selected?.price
 
-                Spacer(Modifier.height(16.dp))
+    if (showConfirm && selected != null) {
+        AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            title = { Text("Confirm purchase") },
+            text = {
+                Text(
+                    "${selected!!.name} - £${formatMoney(selected!!.price)}"
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    onConfirmPurchase(selected!!)
+                    showConfirm = false
+                    showSuccess = true
+                }) { Text("Confirm") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    items(destinations) { d ->
-                        FilledTonalButton(
-                            onClick = { selected = d },
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(vertical = 18.dp)
+    if (showSuccess) {
+        AlertDialog(
+            onDismissRequest = { showSuccess = false },
+            title = { Text("Success") },
+            text = { Text("Ticket purchased.") },
+            confirmButton = {
+                Button(onClick = { showSuccess = false }) { Text("OK") }
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Buy Ticket") })
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+        ) {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(destinations) { d ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                selected = d
+                                showConfirm = true
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("${d.name} - £${"%.2f".format(d.price)}")
+                            Text("${d.name} - £${formatMoney(d.price)}")
                         }
                     }
                 }
             }
 
-            // Amount due (bottom-left)
-            Column(
-                modifier = Modifier.align(Alignment.BottomStart)
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Amount due:", style = MaterialTheme.typography.bodyMedium)
-                Text("£${"%.2f".format(amountDue)}", style = MaterialTheme.typography.bodyLarge)
-            }
-
-            // Back (bottom-right)
-            OutlinedButton(
-                onClick = onBack,
-                modifier = Modifier.align(Alignment.BottomEnd)
-            ) {
-                Text("Back")
-            }
-        }
-
-        val picked = selected
-        if (picked != null) {
-            AlertDialog(
-                onDismissRequest = { selected = null },
-                title = { Text("Confirm purchase") },
-                text = { Text("Buy ticket to ${picked.name} for £${"%.2f".format(picked.price)}?") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            onConfirmPurchase(picked)
-                            selected = null
-                        }
-                    ) { Text("Confirm") }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { selected = null }) { Text("Cancel") }
+                Column(Modifier.weight(1f)) {
+                    Text("Amount due:", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        if (amountDue != null) "£${formatMoney(amountDue)}" else "£0.00",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
-            )
+
+                OutlinedButton(onClick = onBack) {
+                    Text("Back")
+                }
+            }
         }
     }
+}
+
+private fun formatMoney(value: Double): String {
+    return String.format(Locale.UK, "%.2f", value)
 }

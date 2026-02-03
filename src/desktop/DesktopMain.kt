@@ -50,14 +50,10 @@ fun main() = application {
             Screen.BUY -> {
                 BuyScreen(
                     destinations = destinations,
-                    onConfirmPurchase = { d ->
-                        ticketRepo.addPurchase(
-                            destinationId = d.id,
-                            destinationName = d.name,
-                            price = d.price
-                        )
-                    },
-                    onBack = { screen = Screen.HOME }
+                    onBack = { screen = Screen.HOME },
+                    onConfirmPurchase = { destination ->
+                        ticketRepo.insertPurchase(destinationId = destination.id, amountDue = destination.price)
+                    }
                 )
             }
 
