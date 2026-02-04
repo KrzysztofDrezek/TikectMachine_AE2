@@ -12,7 +12,7 @@ object MemberCMain {
     @JvmStatic
     fun main(args: Array<String> = emptyArray()) {
         // MEMBER C demo entrypoint
-        val login = LoginService(UserStore.users)
+        val login = LoginService(UserStore.default())
         val stations = InMemoryStationProvider()
         val repo = SpecialOfferRepository()
         val offers = SpecialOfferService(repo, stations)

@@ -3,6 +3,7 @@ package com.group.ticketmachine.desktop
 import androidx.compose.runtime.*
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import com.group.ticketmachine.auth.LoginService
 import com.group.ticketmachine.db.Db
 import com.group.ticketmachine.db.Schema
 import com.group.ticketmachine.db.repo.DestinationRepo
@@ -11,13 +12,13 @@ import com.group.ticketmachine.gui.App
 import com.group.ticketmachine.gui.BuyScreen
 import com.group.ticketmachine.gui.HistoryScreen
 import com.group.ticketmachine.gui.HomeScreen
+import com.group.ticketmachine.gui.LoginScreen
 import com.group.ticketmachine.model.Destination
-import com.group.ticketmachine.db.repo.TicketRepo.TicketRecord
 import java.nio.file.Files
 import java.nio.file.Paths
 
 private enum class Screen {
-    HOME, BUY, ADMIN, HISTORY
+    HOME, BUY, ADMIN, LOGIN, HISTORY
 }
 
 fun main() = application {
@@ -31,8 +32,12 @@ fun main() = application {
     val destinationRepo = DestinationRepo(db.connection)
     val ticketRepo = TicketRepo(db.connection)
 
+    val loginService = remember { LoginService() }
+
     var destinations by remember { mutableStateOf<List<Destination>>(emptyList()) }
-    var purchases by remember { mutableStateOf<List<TicketRecord>>(emptyList()) }
+    var purchases by remember { mutableStateOf<List<TicketRepo.TicketRecord>>(emptyList()) }
+
+    var isAdminLoggedIn by remember { mutableStateOf(false) }
     var screen by remember { mutableStateOf(Screen.HOME) }
 
     fun refreshDestinations() {
@@ -43,19 +48,18 @@ fun main() = application {
         purchases = ticketRepo.listRecent(limit = 20)
     }
 
-    fun refreshAll() {
+    LaunchedEffect(Unit) {
         refreshDestinations()
         refreshPurchases()
     }
 
-    LaunchedEffect(Unit) { refreshAll() }
-
     Window(onCloseRequest = ::exitApplication, title = "TicketMachine") {
         when (screen) {
+
             Screen.HOME -> {
                 HomeScreen(
                     onBuy = { screen = Screen.BUY },
-                    onAdmin = { screen = Screen.ADMIN },
+                    onAdmin = { screen = if (isAdminLoggedIn) Screen.ADMIN else Screen.LOGIN },
                     onHistory = {
                         refreshPurchases()
                         screen = Screen.HISTORY
@@ -67,13 +71,24 @@ fun main() = application {
                 BuyScreen(
                     destinations = destinations,
                     onBack = { screen = Screen.HOME },
-                    onConfirmPurchase = { destination, type, amountDue ->
+                    onConfirmPurchase = { destination, ticketType, amountDue ->
                         ticketRepo.recordPurchase(
                             destinationId = destination.id,
-                            ticketType = type,
+                            ticketType = ticketType,
                             amountDue = amountDue
                         )
                         refreshPurchases()
+                    }
+                )
+            }
+
+            Screen.LOGIN -> {
+                LoginScreen(
+                    loginService = loginService,
+                    onBack = { screen = Screen.HOME },
+                    onLoginSuccess = {
+                        isAdminLoggedIn = true
+                        screen = Screen.ADMIN
                     }
                 )
             }

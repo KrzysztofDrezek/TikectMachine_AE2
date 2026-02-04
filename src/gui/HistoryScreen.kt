@@ -41,7 +41,7 @@ fun HistoryScreen(
         }
     ) { padding ->
         Column(
-            Modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
@@ -56,17 +56,14 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(purchases) { p ->
-                    Card {
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp)
-                        ) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                             Text(
                                 text = p.destinationName,
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(Modifier.height(4.dp))
+                            Text(text = "Type: ${p.ticketType}")
                             Text(text = "Amount: £${"%.2f".format(p.amountDue)}")
                             Text(text = "Time: ${p.purchasedAt}")
                         }
