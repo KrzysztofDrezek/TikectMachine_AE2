@@ -1,30 +1,36 @@
 package com.group.ticketmachine.auth
 
-class LoginService(private val userStore: UserStore = UserStore.default()) {
+class LoginService(private val adminRepo: AdminUserRepo) {
 
-    var currentUser: User? = null
-        private set
+    private var loggedInAdminUsername: String? = null
 
     fun authenticate(username: String, password: String): Boolean {
-        return userStore.validate(username.trim(), password)
+        val u = username.trim()
+        if (u.isEmpty()) return false
+        return adminRepo.verify(u, password)
     }
 
     fun isAdmin(username: String): Boolean {
-        return userStore.isAdmin(username.trim())
+        // Table contains only admins
+        return username.trim().isNotEmpty()
     }
 
     fun login(username: String, password: String): Boolean {
         val u = username.trim()
         val ok = authenticate(u, password)
-        currentUser = if (ok) userStore.find(u) else null
+        loggedInAdminUsername = if (ok) u else null
         return ok
     }
 
     fun logout() {
-        currentUser = null
+        loggedInAdminUsername = null
     }
 
     fun isAdmin(): Boolean {
-        return currentUser?.isAdmin == true
+        return loggedInAdminUsername != null
+    }
+
+    fun currentUsername(): String? {
+        return loggedInAdminUsername
     }
 }

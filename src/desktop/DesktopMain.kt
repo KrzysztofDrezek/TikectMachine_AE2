@@ -18,6 +18,7 @@ import com.group.ticketmachine.model.Destination
 import com.group.ticketmachine.offers.SpecialOffer
 import com.group.ticketmachine.offers.SpecialOfferRepository
 import com.group.ticketmachine.offers.SpecialOfferService
+import com.group.ticketmachine.auth.AdminUserRepo
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -37,7 +38,7 @@ fun main() = application {
     val destinationRepo = DestinationRepo(db.connection)
     val ticketRepo = TicketRepo(db.connection)
 
-    val loginService = remember { LoginService() }
+    val loginService = remember { LoginService(AdminUserRepo(db.connection)) }
 
     val stationProvider = remember { InMemoryStationProvider() }
     val offerRepo = remember { SpecialOfferRepository(db.connection) }

@@ -1,5 +1,6 @@
 package com.group.ticketmachine.db
 
+import java.security.MessageDigest
 import java.sql.Connection
 
 object Schema {
@@ -43,6 +44,16 @@ object Schema {
                 );
                 """.trimIndent()
             )
+
+            // ✅ Admin users stored in SQLite
+            st.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS admin_users (
+                    username TEXT PRIMARY KEY,
+                    password_hash TEXT NOT NULL
+                );
+                """.trimIndent()
+            )
         }
     }
 
@@ -82,10 +93,25 @@ object Schema {
                 );
                 """.trimIndent()
             )
+
+            // ✅ Ensure admin_users exists for older DBs
+            st.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS admin_users (
+                    username TEXT PRIMARY KEY,
+                    password_hash TEXT NOT NULL
+                );
+                """.trimIndent()
+            )
         }
     }
 
     fun seed(conn: Connection) {
+        seedDestinations(conn)
+        seedAdmin(conn)
+    }
+
+    private fun seedDestinations(conn: Connection) {
         val count = conn.createStatement().use { st ->
             st.executeQuery("SELECT COUNT(*) AS c FROM destinations;").use { rs ->
                 if (rs.next()) rs.getInt("c") else 0
@@ -114,5 +140,30 @@ object Schema {
             }
             ps.executeBatch()
         }
+    }
+
+    private fun seedAdmin(conn: Connection) {
+        val count = conn.createStatement().use { st ->
+            st.executeQuery("SELECT COUNT(*) AS c FROM admin_users;").use { rs ->
+                if (rs.next()) rs.getInt("c") else 0
+            }
+        }
+        if (count > 0) return
+
+        val username = "admin"
+        val password = "admin123"
+
+        conn.prepareStatement(
+            "INSERT INTO admin_users(username, password_hash) VALUES (?, ?);"
+        ).use { ps ->
+            ps.setString(1, username)
+            ps.setString(2, sha256(password))
+            ps.executeUpdate()
+        }
+    }
+
+    private fun sha256(input: String): String {
+        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 }
