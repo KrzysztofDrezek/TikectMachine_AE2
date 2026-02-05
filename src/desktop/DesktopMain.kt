@@ -118,9 +118,9 @@ fun main() = application {
             Screen.BUY -> {
                 BuyScreen(
                     destinations = destinations,
+                    specialOffers = specialOffers,
                     onBack = { screen = Screen.HOME },
                     onConfirmPurchase = { destination, ticketType, amountDue, cardNumber ->
-
                         val ok = runCatching { cardRepo.deduct(cardNumber, amountDue) }.getOrElse {
                             return@BuyScreen PurchaseResult(false, "Card DB error: ${it.message}")
                         }
@@ -152,6 +152,7 @@ fun main() = application {
                         PurchaseResult(true, "Purchase complete.", ticketPrint)
                     }
                 )
+
             }
 
             Screen.LOGIN -> {

@@ -11,6 +11,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.group.ticketmachine.model.Destination
 import com.group.ticketmachine.model.TicketType
+import com.group.ticketmachine.offers.SpecialOffer
+import java.time.LocalDate
+import kotlin.math.max
+import kotlin.math.min
 
 data class PurchaseResult(
     val ok: Boolean,
@@ -21,6 +25,7 @@ data class PurchaseResult(
 @Composable
 fun BuyScreen(
     destinations: List<Destination>,
+    specialOffers: List<SpecialOffer>,
     onBack: () -> Unit,
     onConfirmPurchase: (Destination, TicketType, Double, String) -> PurchaseResult
 ) {
@@ -33,6 +38,38 @@ fun BuyScreen(
     var result by remember { mutableStateOf<PurchaseResult?>(null) }
     var showResult by remember { mutableStateOf(false) }
 
+    val today = LocalDate.now()
+
+    fun basePrice(d: Destination, type: TicketType): Double =
+        when (type) {
+            TicketType.SINGLE -> d.singlePrice
+            TicketType.RETURN -> d.returnPrice
+        }
+
+    fun priceWithOffers(d: Destination, type: TicketType): Pair<Double, String?> {
+        val base = basePrice(d, type)
+
+        val active = specialOffers
+            .filter { it.stationName.equals(d.name, ignoreCase = true) }
+            .filter { !today.isBefore(it.startDate) && !today.isAfter(it.endDate) }
+
+        if (active.isEmpty()) return base to null
+
+        var bestPrice = base
+        var bestLabel: String? = null
+
+        active.forEach { offer ->
+            val p = applyOffer(base, offer.description)
+            if (p < bestPrice) {
+                bestPrice = p
+                bestLabel = offer.description
+            }
+        }
+
+        bestPrice = max(0.0, bestPrice)
+        return bestPrice to bestLabel
+    }
+
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Buy Ticket", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(12.dp))
@@ -42,6 +79,9 @@ fun BuyScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(destinations) { d ->
+                val single = priceWithOffers(d, TicketType.SINGLE).first
+                val ret = priceWithOffers(d, TicketType.RETURN).first
+
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         Modifier.fillMaxWidth().padding(16.dp),
@@ -50,8 +90,8 @@ fun BuyScreen(
                     ) {
                         Column {
                             Text(d.name, style = MaterialTheme.typography.titleMedium)
-                            Text("Single: £%.2f".format(d.singlePrice))
-                            Text("Return: £%.2f".format(d.returnPrice))
+                            Text("Single: £%.2f".format(single))
+                            Text("Return: £%.2f".format(ret))
                         }
 
                         Button(onClick = {
@@ -74,10 +114,7 @@ fun BuyScreen(
 
     if (showDialog && selectedDestination != null) {
         val d = selectedDestination!!
-        val amountDue = when (ticketType) {
-            TicketType.SINGLE -> d.singlePrice
-            TicketType.RETURN -> d.returnPrice
-        }
+        val (amountDue, offerLabel) = priceWithOffers(d, ticketType)
 
         AlertDialog(
             onDismissRequest = { showDialog = false },
@@ -100,17 +137,15 @@ fun BuyScreen(
                     }
 
                     Text("Amount due: £%.2f".format(amountDue))
+                    if (offerLabel != null) {
+                        Text("Offer applied: $offerLabel", style = MaterialTheme.typography.bodySmall)
+                    }
 
                     OutlinedTextField(
                         value = cardNumber,
                         onValueChange = { cardNumber = it },
                         label = { Text("Virtual card number") },
                         modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Text(
-                        "Seeded cards: 4242424242424242 (200), 4000056655665556 (50), 5555555555554444 (120), 378282246310005 (80)",
-                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             },
@@ -163,4 +198,33 @@ fun BuyScreen(
 private fun TicketType.displayName(): String = when (this) {
     TicketType.SINGLE -> "SINGLE"
     TicketType.RETURN -> "RETURN"
+}
+
+private fun applyOffer(base: Double, description: String): Double {
+    val d = description.trim().lowercase()
+
+    // price override: "price=12.34"
+    Regex("""price\s*=\s*([0-9]+([.,][0-9]+)?)""").find(d)?.let { m ->
+        val v = m.groupValues[1].replace(",", ".").toDoubleOrNull()
+        if (v != null) return v
+    }
+
+    // percent off: "10% off"
+    Regex("""([0-9]+([.,][0-9]+)?)\s*%""").find(d)?.let { m ->
+        val pct = m.groupValues[1].replace(",", ".").toDoubleOrNull()
+        if (pct != null) return base * (1.0 - (pct / 100.0))
+    }
+
+    // amount off: "£5 off" or "5£ off"
+    Regex("""£\s*([0-9]+([.,][0-9]+)?)""").find(d)?.let { m ->
+        val off = m.groupValues[1].replace(",", ".").toDoubleOrNull()
+        if (off != null) return max(0.0, base - off)
+    }
+    Regex("""([0-9]+([.,][0-9]+)?)\s*£""").find(d)?.let { m ->
+        val off = m.groupValues[1].replace(",", ".").toDoubleOrNull()
+        if (off != null) return max(0.0, base - off)
+    }
+
+    // fallback: no change
+    return base
 }
