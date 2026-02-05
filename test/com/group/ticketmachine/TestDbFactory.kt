@@ -91,4 +91,20 @@ object TestDbFactory {
             ps.executeUpdate()
         }
     }
+
+    fun createSpecialOffersTable(db: Db) {
+        db.connection.createStatement().use { st ->
+            st.executeUpdate(
+                """
+            CREATE TABLE IF NOT EXISTS special_offers (
+                id TEXT PRIMARY KEY,
+                station_name TEXT NOT NULL,
+                description TEXT NOT NULL,
+                start_date TEXT NOT NULL,
+                end_date TEXT NOT NULL
+            );
+            """.trimIndent()
+            )
+        }
+    }
 }
