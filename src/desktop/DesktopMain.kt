@@ -4,6 +4,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.group.ticketmachine.auth.LoginService
+import com.group.ticketmachine.core.InMemoryStationProvider
 import com.group.ticketmachine.db.Db
 import com.group.ticketmachine.db.Schema
 import com.group.ticketmachine.db.repo.DestinationRepo
@@ -14,11 +15,14 @@ import com.group.ticketmachine.gui.HistoryScreen
 import com.group.ticketmachine.gui.HomeScreen
 import com.group.ticketmachine.gui.LoginScreen
 import com.group.ticketmachine.model.Destination
+import com.group.ticketmachine.offers.SpecialOffer
+import com.group.ticketmachine.offers.SpecialOfferRepository
+import com.group.ticketmachine.offers.SpecialOfferService
 import java.nio.file.Files
 import java.nio.file.Paths
 
 private enum class Screen {
-    HOME, BUY, ADMIN, LOGIN, HISTORY
+    HOME, BUY, LOGIN, ADMIN, HISTORY
 }
 
 fun main() = application {
@@ -34,8 +38,13 @@ fun main() = application {
 
     val loginService = remember { LoginService() }
 
+    val stationProvider = remember { InMemoryStationProvider() }
+    val offerRepo = remember { SpecialOfferRepository() }
+    val offerService = remember { SpecialOfferService(offerRepo, stationProvider) }
+
     var destinations by remember { mutableStateOf<List<Destination>>(emptyList()) }
     var purchases by remember { mutableStateOf<List<TicketRepo.TicketRecord>>(emptyList()) }
+    var specialOffers by remember { mutableStateOf<List<SpecialOffer>>(emptyList()) }
 
     var isAdminLoggedIn by remember { mutableStateOf(false) }
     var screen by remember { mutableStateOf(Screen.HOME) }
@@ -48,14 +57,18 @@ fun main() = application {
         purchases = ticketRepo.listRecent(limit = 20)
     }
 
+    fun refreshOffers() {
+        specialOffers = offerService.listAll()
+    }
+
     LaunchedEffect(Unit) {
         refreshDestinations()
         refreshPurchases()
+        refreshOffers()
     }
 
     Window(onCloseRequest = ::exitApplication, title = "TicketMachine") {
         when (screen) {
-
             Screen.HOME -> {
                 HomeScreen(
                     onBuy = { screen = Screen.BUY },
@@ -96,7 +109,9 @@ fun main() = application {
             Screen.ADMIN -> {
                 App(
                     destinations = destinations,
+                    specialOffers = specialOffers,
                     onBack = { screen = Screen.HOME },
+
                     onAdd = { name, singlePrice, returnPrice ->
                         destinationRepo.add(name, singlePrice, returnPrice)
                         refreshDestinations()
@@ -112,6 +127,15 @@ fun main() = application {
                     onApplyFactor = { factor ->
                         destinationRepo.applyFactor(factor)
                         refreshDestinations()
+                    },
+
+                    onAddOffer = { stationName, description, startDate, endDate ->
+                        offerService.addOffer(stationName, description, startDate, endDate)
+                        refreshOffers()
+                    },
+                    onDeleteOffer = { id ->
+                        offerService.deleteById(id)
+                        refreshOffers()
                     }
                 )
             }

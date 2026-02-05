@@ -7,10 +7,10 @@ class UserStore(private val users: List<User>) {
     }
 
     fun isAdmin(username: String): Boolean {
-        return users.firstOrNull { it.username == username }?.isAdmin == true
+        return users.firstOrNull { it.username == username }?.isAdmin ?: false
     }
 
-    fun findUser(username: String): User? {
+    fun find(username: String): User? {
         return users.firstOrNull { it.username == username }
     }
 
@@ -19,6 +19,7 @@ class UserStore(private val users: List<User>) {
             return UserStore(
                 listOf(
                     User(username = "admin", password = "admin123", isAdmin = true),
+                    User(username = "staff", password = "staff123", isAdmin = false),
                     User(username = "user", password = "user123", isAdmin = false)
                 )
             )
