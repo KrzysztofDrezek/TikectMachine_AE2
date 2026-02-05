@@ -163,13 +163,22 @@ fun main() = application {
                         )
                         refreshPurchases()
 
-                        val ticketText = buildString {
-                            appendLine("=== TicketMachine ===")
-                            appendLine("Destination: ${destination.name}")
-                            appendLine("Type: ${ticketType}")
-                            appendLine("Paid: £${"%.2f".format(amountDue)}")
-                            appendLine("Card: ****${card.takeLast(4)}")
+                        val originStation = "Leeds"
+
+                        val typeLabel = when (ticketType) {
+                            com.group.ticketmachine.model.TicketType.SINGLE -> "Single"
+                            com.group.ticketmachine.model.TicketType.RETURN -> "Return"
                         }
+
+                        val ticketText = """
+$originStation
+
+to
+
+${destination.name}
+
+Price: £${"%.2f".format(amountDue)} [$typeLabel]
+""".trimIndent()
 
                         return@BuyScreen com.group.ticketmachine.gui.PurchaseResult(
                             ok = true,

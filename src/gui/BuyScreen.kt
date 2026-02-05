@@ -260,8 +260,22 @@ fun BuyScreen(
                     result!!.ticketText?.let { ticket ->
                         Divider()
                         Text("Ticket print", fontWeight = FontWeight.Bold)
-                        Text(ticket)
+
+                        val parts = ticket.lines().map { it.trim() }.filter { it.isNotEmpty() }
+                        if (parts.size >= 4) {
+                            Text(parts[0], fontWeight = FontWeight.Bold) // ORIGIN
+                            Spacer(Modifier.height(6.dp))
+                            Text(parts[1]) // to
+                            Spacer(Modifier.height(6.dp))
+                            Text(parts[2], fontWeight = FontWeight.Bold) // DESTINATION
+                            Spacer(Modifier.height(6.dp))
+                            Text(parts[3]) // Price line
+                        } else {
+                            // fallback (just in case)
+                            Text(ticket)
+                        }
                     }
+
                 }
             },
             confirmButton = { Button(onClick = { showResult = false }) { Text("OK") } }
