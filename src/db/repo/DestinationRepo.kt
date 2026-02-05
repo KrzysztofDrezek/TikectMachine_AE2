@@ -57,6 +57,19 @@ class DestinationRepo(private val connection: Connection) {
     }
 
     fun delete(id: Int) {
+        val ticketsCount = connection.prepareStatement(
+            "SELECT COUNT(*) AS c FROM tickets WHERE destination_id = ?"
+        ).use { ps ->
+            ps.setInt(1, id)
+            ps.executeQuery().use { rs ->
+                if (rs.next()) rs.getInt("c") else 0
+            }
+        }
+
+        if (ticketsCount > 0) {
+            throw IllegalStateException("Cannot delete destination: it has $ticketsCount ticket(s) in history.")
+        }
+
         val sql = "DELETE FROM destinations WHERE id = ?"
         connection.prepareStatement(sql).use { ps ->
             ps.setInt(1, id)
@@ -81,5 +94,4 @@ class DestinationRepo(private val connection: Connection) {
             ps.executeUpdate()
         }
     }
-
 }

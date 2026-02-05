@@ -104,6 +104,9 @@ private fun DestinationsAdmin(
     var returnPrice by remember { mutableStateOf("") }
     var factor by remember { mutableStateOf("") }
 
+    // ✅ Status message for destination actions (e.g. delete blocked by history)
+    var statusMsg by remember { mutableStateOf<String?>(null) }
+
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Manage Destinations", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(12.dp))
@@ -135,13 +138,20 @@ private fun DestinationsAdmin(
 
         Button(
             onClick = {
+                statusMsg = null
                 val sp = singlePrice.replace(",", ".").toDoubleOrNull()
                 val rp = returnPrice.replace(",", ".").toDoubleOrNull()
                 if (name.isNotBlank() && sp != null && rp != null) {
-                    onAdd(name, sp, rp)
-                    name = ""
-                    singlePrice = ""
-                    returnPrice = ""
+                    runCatching { onAdd(name, sp, rp) }
+                        .onSuccess {
+                            name = ""
+                            singlePrice = ""
+                            returnPrice = ""
+                            statusMsg = "Destination added."
+                        }
+                        .onFailure { statusMsg = it.message ?: "Add failed." }
+                } else {
+                    statusMsg = "Enter valid name and prices."
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -163,13 +173,25 @@ private fun DestinationsAdmin(
             )
             Button(
                 onClick = {
+                    statusMsg = null
                     val f = factor.replace(",", ".").toDoubleOrNull()
                     if (f != null && f > 0.0) {
-                        onApplyFactor(f)
-                        factor = ""
+                        runCatching { onApplyFactor(f) }
+                            .onSuccess {
+                                factor = ""
+                                statusMsg = "Factor applied."
+                            }
+                            .onFailure { statusMsg = it.message ?: "Apply failed." }
+                    } else {
+                        statusMsg = "Enter a valid factor > 0."
                     }
                 }
             ) { Text("Apply") }
+        }
+
+        if (statusMsg != null) {
+            Spacer(Modifier.height(12.dp))
+            Text(statusMsg!!, style = MaterialTheme.typography.bodyMedium)
         }
 
         Spacer(Modifier.height(16.dp))
@@ -189,7 +211,8 @@ private fun DestinationsAdmin(
                     salesCount = sales,
                     takingsTotal = takings,
                     onUpdate = onUpdate,
-                    onDelete = onDelete
+                    onDelete = onDelete,
+                    setStatus = { statusMsg = it }
                 )
             }
         }
@@ -202,7 +225,8 @@ private fun DestinationRow(
     salesCount: Int,
     takingsTotal: Double,
     onUpdate: (Int, String, Double, Double) -> Unit,
-    onDelete: (Int) -> Unit
+    onDelete: (Int) -> Unit,
+    setStatus: (String?) -> Unit
 ) {
     var editName by remember { mutableStateOf(destination.name) }
     var editSingle by remember { mutableStateOf(destination.singlePrice.toString()) }
@@ -251,17 +275,27 @@ private fun DestinationRow(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = {
+                        setStatus(null)
                         val sp = editSingle.replace(",", ".").toDoubleOrNull()
                         val rp = editReturn.replace(",", ".").toDoubleOrNull()
                         if (editName.isNotBlank() && sp != null && rp != null) {
-                            onUpdate(destination.id, editName, sp, rp)
+                            runCatching { onUpdate(destination.id, editName, sp, rp) }
+                                .onSuccess { setStatus("Destination updated.") }
+                                .onFailure { setStatus(it.message ?: "Update failed.") }
+                        } else {
+                            setStatus("Enter valid name and prices.")
                         }
                     },
                     modifier = Modifier.weight(1f)
                 ) { Text("Save") }
 
                 OutlinedButton(
-                    onClick = { onDelete(destination.id) },
+                    onClick = {
+                        setStatus(null)
+                        runCatching { onDelete(destination.id) }
+                            .onSuccess { setStatus("Destination deleted.") }
+                            .onFailure { setStatus(it.message ?: "Delete failed.") }
+                    },
                     modifier = Modifier.weight(1f)
                 ) { Text("Delete") }
             }
