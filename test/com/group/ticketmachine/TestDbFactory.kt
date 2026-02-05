@@ -107,4 +107,27 @@ object TestDbFactory {
             )
         }
     }
+
+    fun createAdminUsersTable(db: Db) {
+        db.connection.createStatement().use { st ->
+            st.executeUpdate(
+                """
+            CREATE TABLE IF NOT EXISTS admin_users (
+                username TEXT PRIMARY KEY,
+                password_hash TEXT NOT NULL
+            );
+            """.trimIndent()
+            )
+        }
+    }
+
+    fun insertAdminUser(db: Db, username: String, passwordHash: String) {
+        db.connection.prepareStatement(
+            "INSERT INTO admin_users(username, password_hash) VALUES (?, ?);"
+        ).use { ps ->
+            ps.setString(1, username.trim())
+            ps.setString(2, passwordHash)
+            ps.executeUpdate()
+        }
+    }
 }
