@@ -191,9 +191,16 @@ private fun DestinationRow(
     onUpdate: (Int, String, Double, Double) -> Unit,
     onDelete: (Int) -> Unit
 ) {
-    var editName by remember(destination.id) { mutableStateOf(destination.name) }
-    var editSingle by remember(destination.id) { mutableStateOf(destination.singlePrice.toString()) }
-    var editReturn by remember(destination.id) { mutableStateOf(destination.returnPrice.toString()) }
+    var editName by remember { mutableStateOf(destination.name) }
+    var editSingle by remember { mutableStateOf(destination.singlePrice.toString()) }
+    var editReturn by remember { mutableStateOf(destination.returnPrice.toString()) }
+
+    // ✅ Keep UI in sync with DB refresh (e.g. after applyFactor)
+    LaunchedEffect(destination.id, destination.name, destination.singlePrice, destination.returnPrice) {
+        editName = destination.name
+        editSingle = destination.singlePrice.toString()
+        editReturn = destination.returnPrice.toString()
+    }
 
     Card {
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
@@ -242,6 +249,7 @@ private fun DestinationRow(
         }
     }
 }
+
 
 @Composable
 private fun SpecialOffersAdmin(

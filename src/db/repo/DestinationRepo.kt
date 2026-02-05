@@ -65,11 +65,21 @@ class DestinationRepo(private val connection: Connection) {
     }
 
     fun applyFactor(factor: Double) {
-        val safeFactor = factor
-        val sql = "UPDATE destinations SET return_price = single_price * ?"
+        val sql = """
+        UPDATE destinations
+        SET
+            single_price = COALESCE(NULLIF(single_price, 0), NULLIF(price, 0), 0) * ?,
+            return_price = COALESCE(
+                NULLIF(return_price, 0),
+                COALESCE(NULLIF(single_price, 0), NULLIF(price, 0), 0) * 2
+            ) * ?
+    """.trimIndent()
+
         connection.prepareStatement(sql).use { ps ->
-            ps.setDouble(1, safeFactor)
+            ps.setDouble(1, factor)
+            ps.setDouble(2, factor)
             ps.executeUpdate()
         }
     }
+
 }
