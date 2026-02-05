@@ -3,22 +3,21 @@ package com.group.ticketmachine.desktop
 import androidx.compose.runtime.*
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import com.group.ticketmachine.auth.AdminUserRepo
 import com.group.ticketmachine.auth.LoginService
 import com.group.ticketmachine.core.InMemoryStationProvider
+import com.group.ticketmachine.db.CardsSchema
 import com.group.ticketmachine.db.Db
 import com.group.ticketmachine.db.Schema
+import com.group.ticketmachine.db.repo.CardRepo
 import com.group.ticketmachine.db.repo.DestinationRepo
 import com.group.ticketmachine.db.repo.TicketRepo
-import com.group.ticketmachine.gui.App
-import com.group.ticketmachine.gui.BuyScreen
-import com.group.ticketmachine.gui.HistoryScreen
-import com.group.ticketmachine.gui.HomeScreen
-import com.group.ticketmachine.gui.LoginScreen
+import com.group.ticketmachine.gui.*
 import com.group.ticketmachine.model.Destination
+import com.group.ticketmachine.model.TicketType
 import com.group.ticketmachine.offers.SpecialOffer
 import com.group.ticketmachine.offers.SpecialOfferRepository
 import com.group.ticketmachine.offers.SpecialOfferService
-import com.group.ticketmachine.auth.AdminUserRepo
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -30,10 +29,18 @@ fun main() = application {
     val dataDir = Paths.get("data")
     Files.createDirectories(dataDir)
 
+    // Main DB
     val db = Db(dbPath = dataDir.resolve("ticketmachine.db"))
     Schema.create(db.connection)
     Schema.migrate(db.connection)
     Schema.seed(db.connection)
+
+    // Cards DB (virtual cards)
+    val cardsDb = Db(dbPath = dataDir.resolve("cards.db"))
+    CardsSchema.create(cardsDb.connection)
+    CardsSchema.migrate(cardsDb.connection)
+    CardsSchema.seed(cardsDb.connection)
+    val cardRepo = CardRepo(cardsDb.connection)
 
     val destinationRepo = DestinationRepo(db.connection)
     val ticketRepo = TicketRepo(db.connection)
@@ -48,7 +55,7 @@ fun main() = application {
     var purchases by remember { mutableStateOf<List<TicketRepo.TicketRecord>>(emptyList()) }
     var specialOffers by remember { mutableStateOf<List<SpecialOffer>>(emptyList()) }
 
-    // ✅ NEW: sales count map for admin destinations view
+    // sales count map for admin destinations view
     var salesByDestinationId by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
 
     var isAdminLoggedIn by remember { mutableStateOf(false) }
@@ -112,13 +119,37 @@ fun main() = application {
                 BuyScreen(
                     destinations = destinations,
                     onBack = { screen = Screen.HOME },
-                    onConfirmPurchase = { destination, ticketType, amountDue ->
+                    onConfirmPurchase = { destination, ticketType, amountDue, cardNumber ->
+
+                        val ok = runCatching { cardRepo.deduct(cardNumber, amountDue) }.getOrElse {
+                            return@BuyScreen PurchaseResult(false, "Card DB error: ${it.message}")
+                        }
+
+                        if (!ok) {
+                            return@BuyScreen PurchaseResult(
+                                ok = false,
+                                message = "Transaction refused (invalid card or insufficient funds)."
+                            )
+                        }
+
                         ticketRepo.recordPurchase(
                             destinationId = destination.id,
                             ticketType = ticketType.toString(),
                             amountDue = amountDue
                         )
                         refreshPurchases()
+
+                        val ticketPrint = buildString {
+                            appendLine("ORIGIN STATION")
+                            appendLine()
+                            appendLine("to")
+                            appendLine()
+                            appendLine(destination.name)
+                            appendLine()
+                            appendLine("Price: %.2f [%s]".format(amountDue, ticketType.displayName()))
+                        }
+
+                        PurchaseResult(true, "Purchase complete.", ticketPrint)
                     }
                 )
             }
@@ -186,4 +217,9 @@ fun main() = application {
             }
         }
     }
+}
+
+private fun TicketType.displayName(): String = when (this) {
+    TicketType.SINGLE -> "SINGLE"
+    TicketType.RETURN -> "RETURN"
 }
