@@ -14,7 +14,6 @@ import com.group.ticketmachine.model.TicketType
 import com.group.ticketmachine.offers.SpecialOffer
 import java.time.LocalDate
 import kotlin.math.max
-import kotlin.math.min
 
 data class PurchaseResult(
     val ok: Boolean,
@@ -52,6 +51,7 @@ fun BuyScreen(
         val active = specialOffers
             .filter { it.stationName.equals(d.name, ignoreCase = true) }
             .filter { !today.isBefore(it.startDate) && !today.isAfter(it.endDate) }
+            .filter { appliesToType(it.description, type) } // ✅ apply offer only for matching ticket type
 
         if (active.isEmpty()) return base to null
 
@@ -198,6 +198,21 @@ fun BuyScreen(
 private fun TicketType.displayName(): String = when (this) {
     TicketType.SINGLE -> "SINGLE"
     TicketType.RETURN -> "RETURN"
+}
+
+private fun appliesToType(description: String, type: TicketType): Boolean {
+    val d = description.lowercase()
+
+    val mentionsSingle = d.contains("single")
+    val mentionsReturn = d.contains("return")
+
+    // If description mentions neither type -> applies to both
+    if (!mentionsSingle && !mentionsReturn) return true
+
+    return when (type) {
+        TicketType.SINGLE -> mentionsSingle
+        TicketType.RETURN -> mentionsReturn
+    }
 }
 
 private fun applyOffer(base: Double, description: String): Double {
