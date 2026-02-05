@@ -30,6 +30,11 @@ fun BuyScreen(
     onConfirmPurchase: (Destination, TicketType, Double, String) -> PurchaseResult
 ) {
     var selectedDestination by remember { mutableStateOf<Destination?>(null) }
+
+    // Preferred ticket type for search/selection (brief: search by destination + type)
+    var preferredType by remember { mutableStateOf(TicketType.SINGLE) }
+
+    // Used inside the dialog (can still be switched)
     var ticketType by remember { mutableStateOf(TicketType.SINGLE) }
 
     var showDialog by remember { mutableStateOf(false) }
@@ -37,6 +42,9 @@ fun BuyScreen(
 
     var result by remember { mutableStateOf<PurchaseResult?>(null) }
     var showResult by remember { mutableStateOf(false) }
+
+    // Destination search
+    var searchQuery by remember { mutableStateOf("") }
 
     val today = LocalDate.now()
 
@@ -79,15 +87,50 @@ fun BuyScreen(
         return bestPrice to bestLabel
     }
 
+    val filteredDestinations = remember(destinations, searchQuery) {
+        val q = searchQuery.trim()
+        if (q.isEmpty()) destinations
+        else destinations.filter { it.name.contains(q, ignoreCase = true) }
+    }
+
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Buy Ticket", style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(12.dp))
+
+        // Search by destination
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            label = { Text("Search destination") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        // Search by ticket type (preferred)
+        Text("Ticket type", style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(6.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = preferredType == TicketType.SINGLE,
+                onClick = { preferredType = TicketType.SINGLE },
+                label = { Text("Single") }
+            )
+            FilterChip(
+                selected = preferredType == TicketType.RETURN,
+                onClick = { preferredType = TicketType.RETURN },
+                label = { Text("Return") }
+            )
+        }
+
         Spacer(Modifier.height(12.dp))
 
         LazyColumn(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            items(destinations) { d ->
+            items(filteredDestinations) { d ->
                 val single = priceWithOffers(d, TicketType.SINGLE).first
                 val ret = priceWithOffers(d, TicketType.RETURN).first
 
@@ -105,7 +148,7 @@ fun BuyScreen(
 
                         Button(onClick = {
                             selectedDestination = d
-                            ticketType = TicketType.SINGLE
+                            ticketType = preferredType
                             cardNumber = ""
                             showDialog = true
                         }) { Text("Select") }
@@ -163,7 +206,6 @@ fun BuyScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    // Copy-friendly demo cards (no buttons)
                     Text("Demo cards (select & copy):", style = MaterialTheme.typography.bodySmall)
                     SelectionContainer {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -225,11 +267,6 @@ fun BuyScreen(
             confirmButton = { Button(onClick = { showResult = false }) { Text("OK") } }
         )
     }
-}
-
-private fun TicketType.displayName(): String = when (this) {
-    TicketType.SINGLE -> "SINGLE"
-    TicketType.RETURN -> "RETURN"
 }
 
 private fun appliesToType(description: String, type: TicketType): Boolean {
