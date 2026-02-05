@@ -34,7 +34,7 @@ kotlin {
             resources.srcDirs("test/resources", "src/test/resources")
 
             dependencies {
-                implementation(kotlin("test")) // Kotlin test API (bridges to JUnit)
+                implementation(kotlin("test-junit5"))
                 implementation("org.junit.jupiter:junit-jupiter:5.10.2")
             }
         }
@@ -43,6 +43,11 @@ kotlin {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+
+// ✅ make `./gradlew test` work in this MPP project
+tasks.register("test") {
+    dependsOn("desktopTest")
 }
 
 compose.desktop {
