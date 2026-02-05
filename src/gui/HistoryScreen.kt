@@ -33,9 +33,7 @@ fun HistoryScreen(
             TopAppBar(
                 title = { Text("Purchase History") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Text("←")
-                    }
+                    IconButton(onClick = onBack) { Text("←") }
                 }
             )
         }
@@ -59,7 +57,7 @@ fun HistoryScreen(
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                             Text(
-                                text = p.destinationName,
+                                text = "Destination ID: ${p.destinationId}",
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(Modifier.height(4.dp))

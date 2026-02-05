@@ -1,63 +1,79 @@
 package com.group.ticketmachine.db.repo
 
-import com.group.ticketmachine.model.TicketType
 import java.sql.Connection
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class TicketRepo(private val connection: Connection) {
 
     data class TicketRecord(
         val id: Int,
-        val destinationName: String,
-        val ticketType: TicketType,
+        val destinationId: Int,
+        val ticketType: String,
         val amountDue: Double,
         val purchasedAt: String
     )
 
-    fun recordPurchase(destinationId: Int, ticketType: TicketType, amountDue: Double) {
+    fun recordPurchase(destinationId: Int, ticketType: String, amountDue: Double) {
         val sql = """
-            INSERT INTO tickets(destination_id, ticket_type, amount_due)
-            VALUES (?, ?, ?)
+            INSERT INTO tickets(destination_id, ticket_type, amount_due, purchased_at)
+            VALUES (?, ?, ?, ?)
         """.trimIndent()
+
+        val now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
 
         connection.prepareStatement(sql).use { ps ->
             ps.setInt(1, destinationId)
-            ps.setString(2, ticketType.name)
+            ps.setString(2, ticketType)
             ps.setDouble(3, amountDue)
+            ps.setString(4, now)
             ps.executeUpdate()
         }
     }
 
     fun listRecent(limit: Int = 20): List<TicketRecord> {
         val sql = """
-            SELECT
-                t.id,
-                d.name AS destination_name,
-                t.ticket_type,
-                t.amount_due,
-                t.purchased_at
-            FROM tickets t
-            JOIN destinations d ON d.id = t.destination_id
-            ORDER BY t.purchased_at DESC, t.id DESC
+            SELECT id, destination_id, ticket_type, amount_due, purchased_at
+            FROM tickets
+            ORDER BY id DESC
             LIMIT ?
         """.trimIndent()
 
-        return connection.prepareStatement(sql).use { ps ->
+        connection.prepareStatement(sql).use { ps ->
             ps.setInt(1, limit)
             ps.executeQuery().use { rs ->
                 val out = mutableListOf<TicketRecord>()
                 while (rs.next()) {
-                    val typeRaw = rs.getString("ticket_type") ?: "SINGLE"
-                    val type = runCatching { TicketType.valueOf(typeRaw) }.getOrDefault(TicketType.SINGLE)
-
-                    out += TicketRecord(
-                        id = rs.getInt("id"),
-                        destinationName = rs.getString("destination_name"),
-                        ticketType = type,
-                        amountDue = rs.getDouble("amount_due"),
-                        purchasedAt = rs.getString("purchased_at")
+                    out.add(
+                        TicketRecord(
+                            id = rs.getInt("id"),
+                            destinationId = rs.getInt("destination_id"),
+                            ticketType = rs.getString("ticket_type"),
+                            amountDue = rs.getDouble("amount_due"),
+                            purchasedAt = rs.getString("purchased_at")
+                        )
                     )
                 }
-                out
+                return out
+            }
+        }
+    }
+
+    // ✅ NEW: for admin sales per destination
+    fun countSalesByDestination(): Map<Int, Int> {
+        val sql = """
+            SELECT destination_id, COUNT(*) AS c
+            FROM tickets
+            GROUP BY destination_id
+        """.trimIndent()
+
+        connection.prepareStatement(sql).use { ps ->
+            ps.executeQuery().use { rs ->
+                val map = mutableMapOf<Int, Int>()
+                while (rs.next()) {
+                    map[rs.getInt("destination_id")] = rs.getInt("c")
+                }
+                return map
             }
         }
     }

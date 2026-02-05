@@ -17,6 +17,7 @@ import java.time.LocalDate
 @Composable
 fun App(
     destinations: List<Destination>,
+    salesByDestinationId: Map<Int, Int>,
     specialOffers: List<SpecialOffer>,
     onBack: () -> Unit,
 
@@ -66,6 +67,7 @@ fun App(
             when (tabIndex) {
                 0 -> DestinationsAdmin(
                     destinations = destinations,
+                    salesByDestinationId = salesByDestinationId,
                     onAdd = onAdd,
                     onUpdate = onUpdate,
                     onDelete = onDelete,
@@ -88,6 +90,7 @@ fun App(
 @Composable
 private fun DestinationsAdmin(
     destinations: List<Destination>,
+    salesByDestinationId: Map<Int, Int>,
     onAdd: (String, Double, Double) -> Unit,
     onUpdate: (Int, String, Double, Double) -> Unit,
     onDelete: (Int) -> Unit,
@@ -177,6 +180,7 @@ private fun DestinationsAdmin(
             items(destinations) { d ->
                 DestinationRow(
                     destination = d,
+                    salesCount = salesByDestinationId[d.id] ?: 0,
                     onUpdate = onUpdate,
                     onDelete = onDelete
                 )
@@ -188,6 +192,7 @@ private fun DestinationsAdmin(
 @Composable
 private fun DestinationRow(
     destination: Destination,
+    salesCount: Int,
     onUpdate: (Int, String, Double, Double) -> Unit,
     onDelete: (Int) -> Unit
 ) {
@@ -229,6 +234,10 @@ private fun DestinationRow(
 
             Spacer(Modifier.height(8.dp))
 
+            Text("Sales: $salesCount", style = MaterialTheme.typography.bodySmall)
+
+            Spacer(Modifier.height(8.dp))
+
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = {
@@ -249,7 +258,6 @@ private fun DestinationRow(
         }
     }
 }
-
 
 @Composable
 private fun SpecialOffersAdmin(

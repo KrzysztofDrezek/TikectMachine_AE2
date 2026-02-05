@@ -31,7 +31,7 @@ fun main() = application {
 
     val db = Db(dbPath = dataDir.resolve("ticketmachine.db"))
     Schema.create(db.connection)
-    Schema.migrate(db.connection) // ✅ FIX: ensure columns exist
+    Schema.migrate(db.connection)
     Schema.seed(db.connection)
 
     val destinationRepo = DestinationRepo(db.connection)
@@ -47,27 +47,30 @@ fun main() = application {
     var purchases by remember { mutableStateOf<List<TicketRepo.TicketRecord>>(emptyList()) }
     var specialOffers by remember { mutableStateOf<List<SpecialOffer>>(emptyList()) }
 
+    // ✅ NEW: sales count map for admin destinations view
+    var salesByDestinationId by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
+
     var isAdminLoggedIn by remember { mutableStateOf(false) }
     var screen by remember { mutableStateOf(Screen.HOME) }
 
     fun refreshDestinations() {
         destinations = destinationRepo.listAll()
+        salesByDestinationId = ticketRepo.countSalesByDestination()
     }
 
     fun refreshPurchases() {
         purchases = ticketRepo.listRecent(limit = 20)
+        salesByDestinationId = ticketRepo.countSalesByDestination()
     }
 
     fun loadAllOffers() {
         specialOffers = offerService.listAll()
     }
 
-    // POINT 8
     fun searchOffersByStation(station: String) {
         specialOffers = offerService.searchByStation(station)
     }
 
-    // POINT 9
     fun deleteOfferByAnyId(input: String): Boolean {
         if (offerService.deleteById(input)) {
             loadAllOffers()
@@ -111,7 +114,7 @@ fun main() = application {
                     onConfirmPurchase = { destination, ticketType, amountDue ->
                         ticketRepo.recordPurchase(
                             destinationId = destination.id,
-                            ticketType = ticketType,
+                            ticketType = ticketType.toString(),
                             amountDue = amountDue
                         )
                         refreshPurchases()
@@ -133,6 +136,7 @@ fun main() = application {
             Screen.ADMIN -> {
                 App(
                     destinations = destinations,
+                    salesByDestinationId = salesByDestinationId,
                     specialOffers = specialOffers,
                     onBack = { screen = Screen.HOME },
 
@@ -161,18 +165,12 @@ fun main() = application {
                         offerService.deleteById(id)
                         loadAllOffers()
                     },
-
-                    // POINT 8
                     onSearchOffersByStation = { station ->
                         searchOffersByStation(station)
                     },
-
-                    // POINT 9
                     onDeleteOfferByAnyId = { input ->
                         deleteOfferByAnyId(input)
                     },
-
-                    // POINT 10
                     onListAllOffers = {
                         loadAllOffers()
                     }
