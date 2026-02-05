@@ -18,7 +18,6 @@ kotlin {
 
     sourceSets {
         val desktopMain by getting {
-            // Your sources are in src/com/... (no src/main), so map src as sources root.
             kotlin.srcDirs("src")
             resources.srcDirs("resources", "src/resources")
 
@@ -28,14 +27,22 @@ kotlin {
                 implementation("org.xerial:sqlite-jdbc:3.46.0.0")
                 implementation("org.slf4j:slf4j-simple:2.0.13")
             }
-
         }
 
         val desktopTest by getting {
             kotlin.srcDirs("test", "src/test")
             resources.srcDirs("test/resources", "src/test/resources")
+
+            dependencies {
+                implementation(kotlin("test")) // Kotlin test API (bridges to JUnit)
+                implementation("org.junit.jupiter:junit-jupiter:5.10.2")
+            }
         }
     }
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
 
 compose.desktop {
