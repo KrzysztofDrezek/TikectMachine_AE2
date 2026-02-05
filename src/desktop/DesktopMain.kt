@@ -31,6 +31,7 @@ fun main() = application {
 
     val db = Db(dbPath = dataDir.resolve("ticketmachine.db"))
     Schema.create(db.connection)
+    Schema.migrate(db.connection) // ✅ FIX: ensure columns exist
     Schema.seed(db.connection)
 
     val destinationRepo = DestinationRepo(db.connection)
@@ -68,16 +69,13 @@ fun main() = application {
 
     // POINT 9
     fun deleteOfferByAnyId(input: String): Boolean {
-        // Try full ID first
         if (offerService.deleteById(input)) {
             loadAllOffers()
             return true
         }
 
-        // Short-ID prefix: delete only if exactly one match
         val all = offerService.listAll()
         val matches = all.filter { it.id.startsWith(input) }
-
         if (matches.size == 1) {
             val ok = offerService.deleteById(matches.first().id)
             loadAllOffers()
@@ -172,6 +170,11 @@ fun main() = application {
                     // POINT 9
                     onDeleteOfferByAnyId = { input ->
                         deleteOfferByAnyId(input)
+                    },
+
+                    // POINT 10
+                    onListAllOffers = {
+                        loadAllOffers()
                     }
                 )
             }

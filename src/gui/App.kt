@@ -32,7 +32,10 @@ fun App(
     onSearchOffersByStation: (String) -> Unit,
 
     // POINT 9
-    onDeleteOfferByAnyId: (String) -> Boolean
+    onDeleteOfferByAnyId: (String) -> Boolean,
+
+    // POINT 10
+    onListAllOffers: () -> Unit
 ) {
     var tabIndex by remember { mutableStateOf(0) }
 
@@ -74,7 +77,8 @@ fun App(
                     onAddOffer = onAddOffer,
                     onDeleteOffer = onDeleteOffer,
                     onSearchOffersByStation = onSearchOffersByStation,
-                    onDeleteOfferByAnyId = onDeleteOfferByAnyId
+                    onDeleteOfferByAnyId = onDeleteOfferByAnyId,
+                    onListAllOffers = onListAllOffers
                 )
             }
         }
@@ -249,7 +253,10 @@ private fun SpecialOffersAdmin(
     onSearchOffersByStation: (String) -> Unit,
 
     // POINT 9
-    onDeleteOfferByAnyId: (String) -> Boolean
+    onDeleteOfferByAnyId: (String) -> Boolean,
+
+    // POINT 10
+    onListAllOffers: () -> Unit
 ) {
     var station by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -323,8 +330,8 @@ private fun SpecialOffersAdmin(
         Divider()
         Spacer(Modifier.height(16.dp))
 
-        // POINT 8: Search
-        Text("Search offers by station", style = MaterialTheme.typography.titleMedium)
+        // POINT 8 + POINT 10: Search + List All
+        Text("Offers filter", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
 
         OutlinedTextField(
@@ -335,15 +342,26 @@ private fun SpecialOffersAdmin(
         )
         Spacer(Modifier.height(8.dp))
 
-        Button(
-            onClick = {
-                statusMsg = null
-                val q = stationQuery.trim()
-                if (q.isEmpty()) statusMsg = "Enter a station name to search."
-                else onSearchOffersByStation(q)
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) { Text("Search") }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = {
+                    statusMsg = null
+                    val q = stationQuery.trim()
+                    if (q.isEmpty()) statusMsg = "Enter a station name to search."
+                    else onSearchOffersByStation(q)
+                },
+                modifier = Modifier.weight(1f)
+            ) { Text("Search") }
+
+            OutlinedButton(
+                onClick = {
+                    statusMsg = null
+                    stationQuery = ""
+                    onListAllOffers()
+                },
+                modifier = Modifier.weight(1f)
+            ) { Text("List all") }
+        }
 
         Spacer(Modifier.height(16.dp))
         Divider()
@@ -385,7 +403,7 @@ private fun SpecialOffersAdmin(
         Divider()
         Spacer(Modifier.height(16.dp))
 
-        // List (ID is selectable with mouse)
+        // List
         LazyColumn(
             Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -402,7 +420,6 @@ private fun SpecialOffersAdmin(
                             Text("From: ${offer.startDate}  To: ${offer.endDate}")
 
                             Spacer(Modifier.height(6.dp))
-
                             SelectionContainer {
                                 Column {
                                     Text("Short ID: ${offer.id.take(8)}", style = MaterialTheme.typography.bodySmall)
