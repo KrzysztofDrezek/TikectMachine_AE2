@@ -3,6 +3,7 @@ package com.group.ticketmachine.gui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +40,14 @@ fun BuyScreen(
 
     val today = LocalDate.now()
 
+    fun normalizeCard(input: String): String =
+        input.trim().replace(" ", "").replace("-", "")
+
+    fun isCardFormatValid(input: String): Boolean {
+        val n = normalizeCard(input)
+        return n.length == 16 && n.all { it.isDigit() }
+    }
+
     fun basePrice(d: Destination, type: TicketType): Double =
         when (type) {
             TicketType.SINGLE -> d.singlePrice
@@ -51,7 +60,7 @@ fun BuyScreen(
         val active = specialOffers
             .filter { it.stationName.equals(d.name, ignoreCase = true) }
             .filter { !today.isBefore(it.startDate) && !today.isAfter(it.endDate) }
-            .filter { appliesToType(it.description, type) } // ✅ apply offer only for matching ticket type
+            .filter { appliesToType(it.description, type) }
 
         if (active.isEmpty()) return base to null
 
@@ -144,21 +153,44 @@ fun BuyScreen(
                     OutlinedTextField(
                         value = cardNumber,
                         onValueChange = { cardNumber = it },
-                        label = { Text("Virtual card number") },
+                        label = { Text("Virtual card number (16 digits)") },
+                        supportingText = {
+                            val n = normalizeCard(cardNumber)
+                            if (cardNumber.isNotBlank() && !(n.length == 16 && n.all { it.isDigit() })) {
+                                Text("Format: 16 digits. Spaces and dashes are allowed.")
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    // Copy-friendly demo cards (no buttons)
+                    Text("Demo cards (select & copy):", style = MaterialTheme.typography.bodySmall)
+                    SelectionContainer {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("1111111111111111  (£200.00)", style = MaterialTheme.typography.bodySmall)
+                            Text("2222222222222222  (£50.00)", style = MaterialTheme.typography.bodySmall)
+                            Text("3333333333333333  (£120.00)", style = MaterialTheme.typography.bodySmall)
+                            Text("4444444444444444  (£80.00)", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    val card = cardNumber.trim()
-                    if (card.isEmpty()) {
+                    val raw = cardNumber.trim()
+                    if (raw.isEmpty()) {
                         result = PurchaseResult(false, "Enter a card number.")
                         showResult = true
                         return@Button
                     }
 
-                    val r = onConfirmPurchase(d, ticketType, amountDue, card)
+                    if (!isCardFormatValid(raw)) {
+                        result = PurchaseResult(false, "Card must be 16 digits (spaces/dashes allowed).")
+                        showResult = true
+                        return@Button
+                    }
+
+                    val r = onConfirmPurchase(d, ticketType, amountDue, raw)
                     result = r
                     showResult = true
 
@@ -206,7 +238,6 @@ private fun appliesToType(description: String, type: TicketType): Boolean {
     val mentionsSingle = d.contains("single")
     val mentionsReturn = d.contains("return")
 
-    // If description mentions neither type -> applies to both
     if (!mentionsSingle && !mentionsReturn) return true
 
     return when (type) {
@@ -218,19 +249,16 @@ private fun appliesToType(description: String, type: TicketType): Boolean {
 private fun applyOffer(base: Double, description: String): Double {
     val d = description.trim().lowercase()
 
-    // price override: "price=12.34"
     Regex("""price\s*=\s*([0-9]+([.,][0-9]+)?)""").find(d)?.let { m ->
         val v = m.groupValues[1].replace(",", ".").toDoubleOrNull()
         if (v != null) return v
     }
 
-    // percent off: "10% off"
     Regex("""([0-9]+([.,][0-9]+)?)\s*%""").find(d)?.let { m ->
         val pct = m.groupValues[1].replace(",", ".").toDoubleOrNull()
         if (pct != null) return base * (1.0 - (pct / 100.0))
     }
 
-    // amount off: "£5 off" or "5£ off"
     Regex("""£\s*([0-9]+([.,][0-9]+)?)""").find(d)?.let { m ->
         val off = m.groupValues[1].replace(",", ".").toDoubleOrNull()
         if (off != null) return max(0.0, base - off)
@@ -240,6 +268,5 @@ private fun applyOffer(base: Double, description: String): Double {
         if (off != null) return max(0.0, base - off)
     }
 
-    // fallback: no change
     return base
 }
