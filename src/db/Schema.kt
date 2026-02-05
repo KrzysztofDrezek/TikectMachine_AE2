@@ -6,7 +6,6 @@ object Schema {
 
     fun create(conn: Connection) {
         conn.createStatement().use { st ->
-            // Keep schema compatible with older DB: name UNIQUE + legacy "price" column
             st.executeUpdate(
                 """
                 CREATE TABLE IF NOT EXISTS destinations (
@@ -31,6 +30,19 @@ object Schema {
                 );
                 """.trimIndent()
             )
+
+            // ✅ Special offers stored in SQLite
+            st.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS special_offers (
+                    id TEXT PRIMARY KEY,
+                    station_name TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    start_date TEXT NOT NULL,
+                    end_date TEXT NOT NULL
+                );
+                """.trimIndent()
+            )
         }
     }
 
@@ -47,6 +59,7 @@ object Schema {
         }
 
         conn.createStatement().use { st ->
+            // Destinations legacy + current columns
             if (!hasColumn("destinations", "price")) {
                 st.executeUpdate("ALTER TABLE destinations ADD COLUMN price REAL NOT NULL DEFAULT 0;")
             }
@@ -56,6 +69,19 @@ object Schema {
             if (!hasColumn("destinations", "return_price")) {
                 st.executeUpdate("ALTER TABLE destinations ADD COLUMN return_price REAL NOT NULL DEFAULT 0;")
             }
+
+            // ✅ Ensure special_offers exists for older DBs
+            st.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS special_offers (
+                    id TEXT PRIMARY KEY,
+                    station_name TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    start_date TEXT NOT NULL,
+                    end_date TEXT NOT NULL
+                );
+                """.trimIndent()
+            )
         }
     }
 
@@ -81,7 +107,7 @@ object Schema {
         ).use { ps ->
             defaults.forEach { (name, singlePrice, returnPrice) ->
                 ps.setString(1, name)
-                ps.setDouble(2, singlePrice)   // legacy price == single price in old DB
+                ps.setDouble(2, singlePrice)   // legacy price == single price
                 ps.setDouble(3, singlePrice)
                 ps.setDouble(4, returnPrice)
                 ps.addBatch()

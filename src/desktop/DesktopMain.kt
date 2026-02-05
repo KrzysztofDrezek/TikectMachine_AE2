@@ -40,7 +40,7 @@ fun main() = application {
     val loginService = remember { LoginService() }
 
     val stationProvider = remember { InMemoryStationProvider() }
-    val offerRepo = remember { SpecialOfferRepository() }
+    val offerRepo = remember { SpecialOfferRepository(db.connection) }
     val offerService = remember { SpecialOfferService(offerRepo, stationProvider) }
 
     var destinations by remember { mutableStateOf<List<Destination>>(emptyList()) }
