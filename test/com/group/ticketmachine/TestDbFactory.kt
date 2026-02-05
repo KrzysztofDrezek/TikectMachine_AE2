@@ -44,4 +44,51 @@ object TestDbFactory {
             ps.executeUpdate()
         }
     }
+
+    fun createDestinationsAndTicketsTables(db: Db) {
+        db.connection.createStatement().use { st ->
+            st.executeUpdate(
+                """
+            CREATE TABLE IF NOT EXISTS destinations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                price REAL NOT NULL DEFAULT 0,
+                return_price REAL NOT NULL DEFAULT 0,
+                single_price REAL NOT NULL DEFAULT 0
+            );
+            """.trimIndent()
+            )
+
+            st.executeUpdate(
+                """
+            CREATE TABLE IF NOT EXISTS tickets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                destination_id INTEGER NOT NULL,
+                ticket_type TEXT NOT NULL,
+                amount_due REAL NOT NULL,
+                purchased_at TEXT NOT NULL,
+                FOREIGN KEY(destination_id) REFERENCES destinations(id)
+            );
+            """.trimIndent()
+            )
+        }
+    }
+
+    fun insertDestination(db: Db, id: Int? = null, name: String, single: Double, ret: Double) {
+        val sql = if (id == null) {
+            "INSERT INTO destinations(name, price, single_price, return_price) VALUES (?, ?, ?, ?);"
+        } else {
+            "INSERT INTO destinations(id, name, price, single_price, return_price) VALUES (?, ?, ?, ?, ?);"
+        }
+
+        db.connection.prepareStatement(sql).use { ps ->
+            var i = 1
+            if (id != null) ps.setInt(i++, id)
+            ps.setString(i++, name)
+            ps.setDouble(i++, single) // legacy price = single
+            ps.setDouble(i++, single)
+            ps.setDouble(i++, ret)
+            ps.executeUpdate()
+        }
+    }
 }
