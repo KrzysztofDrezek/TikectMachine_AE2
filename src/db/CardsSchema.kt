@@ -30,10 +30,10 @@ object CardsSchema {
         if (count > 0) return
 
         val defaults = listOf(
-            "4242424242424242" to 200.00,
-            "4000056655665556" to 50.00,
-            "5555555555554444" to 120.00,
-            "378282246310005" to 80.00
+            "1111111111111111" to 200.00,
+            "2222222222222222" to 50.00,
+            "3333333333333333" to 120.00,
+            "4444444444444444" to 80.00
         )
 
         conn.prepareStatement("INSERT INTO cards(card_number, credit) VALUES (?, ?);").use { ps ->

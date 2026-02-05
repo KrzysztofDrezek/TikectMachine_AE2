@@ -30,8 +30,13 @@ fun App(
     onAddOffer: (String, String, LocalDate, LocalDate) -> Unit,
     onDeleteOffer: (String) -> Unit,
 
+    // POINT 8
     onSearchOffersByStation: (String) -> Unit,
+
+    // POINT 9
     onDeleteOfferByAnyId: (String) -> Boolean,
+
+    // POINT 10
     onListAllOffers: () -> Unit
 ) {
     var tabIndex by remember { mutableStateOf(0) }
@@ -182,7 +187,7 @@ private fun DestinationsAdmin(
                 DestinationRow(
                     destination = d,
                     salesCount = sales,
-                    takings = takings,
+                    takingsTotal = takings,
                     onUpdate = onUpdate,
                     onDelete = onDelete
                 )
@@ -195,7 +200,7 @@ private fun DestinationsAdmin(
 private fun DestinationRow(
     destination: Destination,
     salesCount: Int,
-    takings: Double,
+    takingsTotal: Double,
     onUpdate: (Int, String, Double, Double) -> Unit,
     onDelete: (Int) -> Unit
 ) {
@@ -213,7 +218,7 @@ private fun DestinationRow(
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
 
             Text(
-                "Sales: $salesCount   |   Takings: £%.2f".format(takings),
+                text = "Sales: $salesCount   |   Takings: £${"%.2f".format(takingsTotal)}",
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(Modifier.height(8.dp))
@@ -264,8 +269,6 @@ private fun DestinationRow(
     }
 }
 
-/* --- Special offers tab: unchanged from your working version --- */
-
 @Composable
 private fun SpecialOffersAdmin(
     specialOffers: List<SpecialOffer>,
@@ -281,6 +284,7 @@ private fun SpecialOffersAdmin(
     var endDate by remember { mutableStateOf(LocalDate.now().plusDays(7).toString()) }
 
     var stationQuery by remember { mutableStateOf("") }
+
     var deleteId by remember { mutableStateOf("") }
     var statusMsg by remember { mutableStateOf<String?>(null) }
 
