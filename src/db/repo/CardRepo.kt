@@ -4,10 +4,21 @@ import java.sql.Connection
 
 class CardRepo(private val connection: Connection) {
 
+    private fun normalize(cardNumber: String): String {
+        return cardNumber.trim().replace(" ", "").replace("-", "")
+    }
+
+    private fun isValidCardNumber(normalized: String): Boolean {
+        return normalized.length == 16 && normalized.all { it.isDigit() }
+    }
+
     fun getCredit(cardNumber: String): Double? {
+        val card = normalize(cardNumber)
+        if (!isValidCardNumber(card)) return null
+
         val sql = "SELECT credit FROM cards WHERE card_number = ?"
         connection.prepareStatement(sql).use { ps ->
-            ps.setString(1, cardNumber.trim())
+            ps.setString(1, card)
             ps.executeQuery().use { rs ->
                 return if (rs.next()) rs.getDouble("credit") else null
             }
@@ -15,8 +26,8 @@ class CardRepo(private val connection: Connection) {
     }
 
     fun deduct(cardNumber: String, amount: Double): Boolean {
-        val card = cardNumber.trim()
-        if (card.isEmpty()) return false
+        val card = normalize(cardNumber)
+        if (!isValidCardNumber(card)) return false
         if (amount <= 0) return false
 
         connection.autoCommit = false
