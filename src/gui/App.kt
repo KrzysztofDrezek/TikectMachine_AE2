@@ -18,6 +18,7 @@ import java.time.LocalDate
 fun App(
     destinations: List<Destination>,
     salesByDestinationId: Map<Int, Int>,
+    takingsByDestinationId: Map<Int, Double>,
     specialOffers: List<SpecialOffer>,
     onBack: () -> Unit,
 
@@ -29,13 +30,8 @@ fun App(
     onAddOffer: (String, String, LocalDate, LocalDate) -> Unit,
     onDeleteOffer: (String) -> Unit,
 
-    // POINT 8
     onSearchOffersByStation: (String) -> Unit,
-
-    // POINT 9
     onDeleteOfferByAnyId: (String) -> Boolean,
-
-    // POINT 10
     onListAllOffers: () -> Unit
 ) {
     var tabIndex by remember { mutableStateOf(0) }
@@ -68,6 +64,7 @@ fun App(
                 0 -> DestinationsAdmin(
                     destinations = destinations,
                     salesByDestinationId = salesByDestinationId,
+                    takingsByDestinationId = takingsByDestinationId,
                     onAdd = onAdd,
                     onUpdate = onUpdate,
                     onDelete = onDelete,
@@ -91,6 +88,7 @@ fun App(
 private fun DestinationsAdmin(
     destinations: List<Destination>,
     salesByDestinationId: Map<Int, Int>,
+    takingsByDestinationId: Map<Int, Double>,
     onAdd: (String, Double, Double) -> Unit,
     onUpdate: (Int, String, Double, Double) -> Unit,
     onDelete: (Int) -> Unit,
@@ -178,9 +176,13 @@ private fun DestinationsAdmin(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(destinations) { d ->
+                val sales = salesByDestinationId[d.id] ?: 0
+                val takings = takingsByDestinationId[d.id] ?: 0.0
+
                 DestinationRow(
                     destination = d,
-                    salesCount = salesByDestinationId[d.id] ?: 0,
+                    salesCount = sales,
+                    takings = takings,
                     onUpdate = onUpdate,
                     onDelete = onDelete
                 )
@@ -193,6 +195,7 @@ private fun DestinationsAdmin(
 private fun DestinationRow(
     destination: Destination,
     salesCount: Int,
+    takings: Double,
     onUpdate: (Int, String, Double, Double) -> Unit,
     onDelete: (Int) -> Unit
 ) {
@@ -200,7 +203,6 @@ private fun DestinationRow(
     var editSingle by remember { mutableStateOf(destination.singlePrice.toString()) }
     var editReturn by remember { mutableStateOf(destination.returnPrice.toString()) }
 
-    // ✅ Keep UI in sync with DB refresh (e.g. after applyFactor)
     LaunchedEffect(destination.id, destination.name, destination.singlePrice, destination.returnPrice) {
         editName = destination.name
         editSingle = destination.singlePrice.toString()
@@ -209,6 +211,13 @@ private fun DestinationRow(
 
     Card {
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
+
+            Text(
+                "Sales: $salesCount   |   Takings: £%.2f".format(takings),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = editName,
                 onValueChange = { editName = it },
@@ -234,10 +243,6 @@ private fun DestinationRow(
 
             Spacer(Modifier.height(8.dp))
 
-            Text("Sales: $salesCount", style = MaterialTheme.typography.bodySmall)
-
-            Spacer(Modifier.height(8.dp))
-
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = {
@@ -259,19 +264,15 @@ private fun DestinationRow(
     }
 }
 
+/* --- Special offers tab: unchanged from your working version --- */
+
 @Composable
 private fun SpecialOffersAdmin(
     specialOffers: List<SpecialOffer>,
     onAddOffer: (String, String, LocalDate, LocalDate) -> Unit,
     onDeleteOffer: (String) -> Unit,
-
-    // POINT 8
     onSearchOffersByStation: (String) -> Unit,
-
-    // POINT 9
     onDeleteOfferByAnyId: (String) -> Boolean,
-
-    // POINT 10
     onListAllOffers: () -> Unit
 ) {
     var station by remember { mutableStateOf("") }
@@ -279,10 +280,7 @@ private fun SpecialOffersAdmin(
     var startDate by remember { mutableStateOf(LocalDate.now().toString()) }
     var endDate by remember { mutableStateOf(LocalDate.now().plusDays(7).toString()) }
 
-    // POINT 8
     var stationQuery by remember { mutableStateOf("") }
-
-    // POINT 9
     var deleteId by remember { mutableStateOf("") }
     var statusMsg by remember { mutableStateOf<String?>(null) }
 
@@ -290,7 +288,6 @@ private fun SpecialOffersAdmin(
         Text("Special Offers", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(12.dp))
 
-        // Add offer
         OutlinedTextField(
             value = station,
             onValueChange = { station = it },
@@ -346,7 +343,6 @@ private fun SpecialOffersAdmin(
         Divider()
         Spacer(Modifier.height(16.dp))
 
-        // POINT 8 + POINT 10: Search + List All
         Text("Offers filter", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
 
@@ -383,7 +379,6 @@ private fun SpecialOffersAdmin(
         Divider()
         Spacer(Modifier.height(16.dp))
 
-        // POINT 9: Delete by ID
         Text("Delete offer by ID", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
 
@@ -419,7 +414,6 @@ private fun SpecialOffersAdmin(
         Divider()
         Spacer(Modifier.height(16.dp))
 
-        // List
         LazyColumn(
             Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)

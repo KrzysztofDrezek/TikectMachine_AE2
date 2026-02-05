@@ -77,4 +77,22 @@ class TicketRepo(private val connection: Connection) {
             }
         }
     }
+
+    fun sumTakingsByDestination(): Map<Int, Double> {
+        val sql = """
+        SELECT destination_id, COALESCE(SUM(amount_due), 0) AS total
+        FROM tickets
+        GROUP BY destination_id
+    """.trimIndent()
+
+        connection.prepareStatement(sql).use { ps ->
+            ps.executeQuery().use { rs ->
+                val out = mutableMapOf<Int, Double>()
+                while (rs.next()) {
+                    out[rs.getInt("destination_id")] = rs.getDouble("total")
+                }
+                return out
+            }
+        }
+    }
 }

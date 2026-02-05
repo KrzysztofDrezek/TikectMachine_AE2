@@ -35,7 +35,7 @@ fun main() = application {
     Schema.migrate(db.connection)
     Schema.seed(db.connection)
 
-    // Cards DB (virtual cards)
+    // Cards DB
     val cardsDb = Db(dbPath = dataDir.resolve("cards.db"))
     CardsSchema.create(cardsDb.connection)
     CardsSchema.migrate(cardsDb.connection)
@@ -55,8 +55,9 @@ fun main() = application {
     var purchases by remember { mutableStateOf<List<TicketRepo.TicketRecord>>(emptyList()) }
     var specialOffers by remember { mutableStateOf<List<SpecialOffer>>(emptyList()) }
 
-    // sales count map for admin destinations view
+    // ✅ sales count + takings (£) maps for admin destinations view
     var salesByDestinationId by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
+    var takingsByDestinationId by remember { mutableStateOf<Map<Int, Double>>(emptyMap()) }
 
     var isAdminLoggedIn by remember { mutableStateOf(false) }
     var screen by remember { mutableStateOf(Screen.HOME) }
@@ -64,11 +65,13 @@ fun main() = application {
     fun refreshDestinations() {
         destinations = destinationRepo.listAll()
         salesByDestinationId = ticketRepo.countSalesByDestination()
+        takingsByDestinationId = ticketRepo.sumTakingsByDestination()
     }
 
     fun refreshPurchases() {
         purchases = ticketRepo.listRecent(limit = 20)
         salesByDestinationId = ticketRepo.countSalesByDestination()
+        takingsByDestinationId = ticketRepo.sumTakingsByDestination()
     }
 
     fun loadAllOffers() {
@@ -121,6 +124,7 @@ fun main() = application {
                     specialOffers = specialOffers,
                     onBack = { screen = Screen.HOME },
                     onConfirmPurchase = { destination, ticketType, amountDue, cardNumber ->
+
                         val ok = runCatching { cardRepo.deduct(cardNumber, amountDue) }.getOrElse {
                             return@BuyScreen PurchaseResult(false, "Card DB error: ${it.message}")
                         }
@@ -152,7 +156,6 @@ fun main() = application {
                         PurchaseResult(true, "Purchase complete.", ticketPrint)
                     }
                 )
-
             }
 
             Screen.LOGIN -> {
@@ -170,6 +173,7 @@ fun main() = application {
                 App(
                     destinations = destinations,
                     salesByDestinationId = salesByDestinationId,
+                    takingsByDestinationId = takingsByDestinationId,
                     specialOffers = specialOffers,
                     onBack = { screen = Screen.HOME },
 
