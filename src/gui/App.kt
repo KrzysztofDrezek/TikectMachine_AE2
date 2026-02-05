@@ -5,6 +5,7 @@ package com.group.ticketmachine.gui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -25,7 +26,13 @@ fun App(
     onApplyFactor: (Double) -> Unit,
 
     onAddOffer: (String, String, LocalDate, LocalDate) -> Unit,
-    onDeleteOffer: (String) -> Unit
+    onDeleteOffer: (String) -> Unit,
+
+    // POINT 8
+    onSearchOffersByStation: (String) -> Unit,
+
+    // POINT 9
+    onDeleteOfferByAnyId: (String) -> Boolean
 ) {
     var tabIndex by remember { mutableStateOf(0) }
 
@@ -33,9 +40,7 @@ fun App(
         topBar = {
             TopAppBar(
                 title = { Text("Admin Panel") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Text("←") }
-                }
+                navigationIcon = { IconButton(onClick = onBack) { Text("←") } }
             )
         }
     ) { padding ->
@@ -67,7 +72,9 @@ fun App(
                 1 -> SpecialOffersAdmin(
                     specialOffers = specialOffers,
                     onAddOffer = onAddOffer,
-                    onDeleteOffer = onDeleteOffer
+                    onDeleteOffer = onDeleteOffer,
+                    onSearchOffersByStation = onSearchOffersByStation,
+                    onDeleteOfferByAnyId = onDeleteOfferByAnyId
                 )
             }
         }
@@ -236,26 +243,34 @@ private fun DestinationRow(
 private fun SpecialOffersAdmin(
     specialOffers: List<SpecialOffer>,
     onAddOffer: (String, String, LocalDate, LocalDate) -> Unit,
-    onDeleteOffer: (String) -> Unit
+    onDeleteOffer: (String) -> Unit,
+
+    // POINT 8
+    onSearchOffersByStation: (String) -> Unit,
+
+    // POINT 9
+    onDeleteOfferByAnyId: (String) -> Boolean
 ) {
-    var stationName by remember { mutableStateOf("") }
+    var station by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var startDateText by remember { mutableStateOf("") } // YYYY-MM-DD
-    var endDateText by remember { mutableStateOf("") }   // YYYY-MM-DD
-    var error by remember { mutableStateOf<String?>(null) }
+    var startDate by remember { mutableStateOf(LocalDate.now().toString()) }
+    var endDate by remember { mutableStateOf(LocalDate.now().plusDays(7).toString()) }
+
+    // POINT 8
+    var stationQuery by remember { mutableStateOf("") }
+
+    // POINT 9
+    var deleteId by remember { mutableStateOf("") }
+    var statusMsg by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Special Offers", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(12.dp))
 
-        if (error != null) {
-            Text(error!!, color = MaterialTheme.colorScheme.error)
-            Spacer(Modifier.height(8.dp))
-        }
-
+        // Add offer
         OutlinedTextField(
-            value = stationName,
-            onValueChange = { stationName = it },
+            value = station,
+            onValueChange = { station = it },
             label = { Text("Station name") },
             modifier = Modifier.fillMaxWidth()
         )
@@ -270,16 +285,16 @@ private fun SpecialOffersAdmin(
         Spacer(Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = startDateText,
-            onValueChange = { startDateText = it },
+            value = startDate,
+            onValueChange = { startDate = it },
             label = { Text("Start date (YYYY-MM-DD)") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = endDateText,
-            onValueChange = { endDateText = it },
+            value = endDate,
+            onValueChange = { endDate = it },
             label = { Text("End date (YYYY-MM-DD)") },
             modifier = Modifier.fillMaxWidth()
         )
@@ -288,29 +303,17 @@ private fun SpecialOffersAdmin(
 
         Button(
             onClick = {
-                error = null
-
-                val start = runCatching { LocalDate.parse(startDateText.trim()) }.getOrNull()
-                val end = runCatching { LocalDate.parse(endDateText.trim()) }.getOrNull()
-
-                when {
-                    stationName.isBlank() -> error = "Station name is required."
-                    description.isBlank() -> error = "Description is required."
-                    start == null -> error = "Start date must be in format YYYY-MM-DD."
-                    end == null -> error = "End date must be in format YYYY-MM-DD."
-                    end.isBefore(start) -> error = "End date cannot be before start date."
-                    else -> {
-                        onAddOffer(
-                            stationName.trim(),
-                            description.trim(),
-                            start,
-                            end
-                        )
-                        stationName = ""
+                statusMsg = null
+                runCatching {
+                    val s = LocalDate.parse(startDate.trim())
+                    val e = LocalDate.parse(endDate.trim())
+                    if (station.isNotBlank() && description.isNotBlank()) {
+                        onAddOffer(station, description, s, e)
+                        station = ""
                         description = ""
-                        startDateText = ""
-                        endDateText = ""
                     }
+                }.onFailure {
+                    statusMsg = "Invalid date format. Use YYYY-MM-DD."
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -320,28 +323,95 @@ private fun SpecialOffersAdmin(
         Divider()
         Spacer(Modifier.height(16.dp))
 
-        if (specialOffers.isEmpty()) {
-            Text("No offers yet.")
-            return@Column
+        // POINT 8: Search
+        Text("Search offers by station", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = stationQuery,
+            onValueChange = { stationQuery = it },
+            label = { Text("Station name (search)") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                statusMsg = null
+                val q = stationQuery.trim()
+                if (q.isEmpty()) statusMsg = "Enter a station name to search."
+                else onSearchOffersByStation(q)
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Search") }
+
+        Spacer(Modifier.height(16.dp))
+        Divider()
+        Spacer(Modifier.height(16.dp))
+
+        // POINT 9: Delete by ID
+        Text("Delete offer by ID", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = deleteId,
+            onValueChange = { deleteId = it },
+            label = { Text("Offer ID (full or short prefix)") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                statusMsg = null
+                val input = deleteId.trim()
+                if (input.isEmpty()) {
+                    statusMsg = "Enter an ID (full or short)."
+                    return@Button
+                }
+                val ok = onDeleteOfferByAnyId(input)
+                statusMsg = if (ok) "Offer deleted." else "Not found, or short ID is ambiguous."
+                if (ok) deleteId = ""
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Delete by ID") }
+
+        if (statusMsg != null) {
+            Spacer(Modifier.height(12.dp))
+            Text(statusMsg!!, style = MaterialTheme.typography.bodyMedium)
         }
 
+        Spacer(Modifier.height(16.dp))
+        Divider()
+        Spacer(Modifier.height(16.dp))
+
+        // List (ID is selectable with mouse)
         LazyColumn(
             Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(specialOffers) { o ->
+            items(specialOffers) { offer ->
                 Card {
                     Row(
                         Modifier.fillMaxWidth().padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(o.stationName, style = MaterialTheme.typography.titleMedium)
-                            Spacer(Modifier.height(4.dp))
-                            Text("Description: ${o.description}")
-                            Text("From: ${o.startDate}  To: ${o.endDate}")
+                            Text(offer.stationName, style = MaterialTheme.typography.titleMedium)
+                            Text("Description: ${offer.description}")
+                            Text("From: ${offer.startDate}  To: ${offer.endDate}")
+
+                            Spacer(Modifier.height(6.dp))
+
+                            SelectionContainer {
+                                Column {
+                                    Text("Short ID: ${offer.id.take(8)}", style = MaterialTheme.typography.bodySmall)
+                                    Text("Full ID: ${offer.id}", style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
                         }
-                        OutlinedButton(onClick = { onDeleteOffer(o.id) }) {
+
+                        OutlinedButton(onClick = { onDeleteOffer(offer.id) }) {
                             Text("Delete")
                         }
                     }

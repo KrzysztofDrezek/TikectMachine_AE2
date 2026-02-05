@@ -57,14 +57,40 @@ fun main() = application {
         purchases = ticketRepo.listRecent(limit = 20)
     }
 
-    fun refreshOffers() {
+    fun loadAllOffers() {
         specialOffers = offerService.listAll()
+    }
+
+    // POINT 8
+    fun searchOffersByStation(station: String) {
+        specialOffers = offerService.searchByStation(station)
+    }
+
+    // POINT 9
+    fun deleteOfferByAnyId(input: String): Boolean {
+        // Try full ID first
+        if (offerService.deleteById(input)) {
+            loadAllOffers()
+            return true
+        }
+
+        // Short-ID prefix: delete only if exactly one match
+        val all = offerService.listAll()
+        val matches = all.filter { it.id.startsWith(input) }
+
+        if (matches.size == 1) {
+            val ok = offerService.deleteById(matches.first().id)
+            loadAllOffers()
+            return ok
+        }
+
+        return false
     }
 
     LaunchedEffect(Unit) {
         refreshDestinations()
         refreshPurchases()
-        refreshOffers()
+        loadAllOffers()
     }
 
     Window(onCloseRequest = ::exitApplication, title = "TicketMachine") {
@@ -131,11 +157,21 @@ fun main() = application {
 
                     onAddOffer = { stationName, description, startDate, endDate ->
                         offerService.addOffer(stationName, description, startDate, endDate)
-                        refreshOffers()
+                        loadAllOffers()
                     },
                     onDeleteOffer = { id ->
                         offerService.deleteById(id)
-                        refreshOffers()
+                        loadAllOffers()
+                    },
+
+                    // POINT 8
+                    onSearchOffersByStation = { station ->
+                        searchOffersByStation(station)
+                    },
+
+                    // POINT 9
+                    onDeleteOfferByAnyId = { input ->
+                        deleteOfferByAnyId(input)
                     }
                 )
             }
