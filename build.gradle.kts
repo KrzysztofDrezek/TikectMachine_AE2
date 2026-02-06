@@ -34,24 +34,20 @@ kotlin {
             resources.srcDirs("test/resources", "src/test/resources")
 
             dependencies {
-                implementation(kotlin("test-junit5"))
+                implementation(kotlin("test"))
                 implementation("org.junit.jupiter:junit-jupiter:5.10.2")
             }
         }
     }
 }
 
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
-}
-
-// ✅ make `./gradlew test` work in this MPP project
-tasks.register("test") {
-    dependsOn("desktopTest")
-}
-
 compose.desktop {
     application {
         mainClass = "com.group.ticketmachine.desktop.DesktopMainKt"
     }
+}
+
+// ✅ Ensure JUnit5 platform for tests
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }

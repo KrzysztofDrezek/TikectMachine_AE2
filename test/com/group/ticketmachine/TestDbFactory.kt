@@ -26,11 +26,11 @@ object TestDbFactory {
         db.connection.createStatement().use { st ->
             st.executeUpdate(
                 """
-                CREATE TABLE IF NOT EXISTS cards (
-                    card_number TEXT PRIMARY KEY,
-                    credit REAL NOT NULL DEFAULT 0
-                );
-                """.trimIndent()
+            CREATE TABLE IF NOT EXISTS cards (
+                card_number TEXT PRIMARY KEY,
+                credit REAL NOT NULL DEFAULT 0
+            );
+            """.trimIndent()
             )
         }
     }
@@ -39,7 +39,7 @@ object TestDbFactory {
         db.connection.prepareStatement(
             "INSERT INTO cards(card_number, credit) VALUES (?, ?);"
         ).use { ps ->
-            ps.setString(1, cardNumber)
+            ps.setString(1, cardNumber.trim())
             ps.setDouble(2, credit)
             ps.executeUpdate()
         }
